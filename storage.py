@@ -69,6 +69,9 @@ class InMemoryStorage(BaseStorage):
     def keys(self):
         return self.storage.keys()
 
+    def items(self):
+        return self.storage.items()
+
     def set_val(self, key, val):
         self.storage[key] = val
 

@@ -5,17 +5,21 @@ import numpy
 from pycuda.compiler import SourceModule
  
 
-def cuda_hamming_dist(vec_a, vec_b):
+class CudaHamming(object):
 
- 
-    mod = SourceModule("""
+    def __init__(self, block = (500, 1, 1), grid = (500, 200)):
+
+        vector_len = 100000
+
+        self.mod = SourceModule("""
 typedef unsigned long long int uint64_t;
-__global__ void hamming_dist(uint64_t *dest, uint64_t *a, uint64_t *b, uint64_t *length)
+__global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
 {
   const uint64_t i = gridDim.x * blockDim.x * blockIdx.y + blockIdx.x * blockDim.x + threadIdx.x;
   uint64_t xor_r;
 
-  if (i < %(length)s) {
+  //if (i < %(length)s) {
+  if (i < length[0]) {
     xor_r = a[0] ^ b[i];
 
     const uint64_t m1  = 0x5555555555555555; 
@@ -31,22 +35,44 @@ __global__ void hamming_dist(uint64_t *dest, uint64_t *a, uint64_t *b, uint64_t 
     xor_r = (xor_r & m2) + ((xor_r >> 2) & m2); 
     xor_r = (xor_r + (xor_r >> 4)) & m4;        
 
-    dest[i] = (xor_r * h01) >> 56;
+    b[i] = (xor_r * h01) >> 56;
   }
 
 }
-""" % {"length": vec_b.shape[0]})
+""" % {"length": vector_len})
 
-    hamming_dist = mod.get_function("hamming_dist")
+        self.hamming_dist = self.mod.get_function("hamming_dist")
 
-    dest = numpy.zeros_like(vec_b)
-    length = numpy.array([vec_b.shape[0]]).astype(numpy.uint64)
-    hamming_dist(
-            drv.Out(dest), drv.In(vec_a), drv.In(vec_b), drv.In(length),
-            block=(500, 1, 1), grid=(500, 200))
+        self.block = block
+        self.grid = grid
 
-    print dest
+    def multi_iteration(self, vec_a, vec_b):
 
-    return dest
+        vector_len = vec_b.shape[0]
+ 
+        sections = range(0, vector_len, 10000000)
+        sections = sections[1:]
+
+        sub_vec_bs = numpy.split(vec_b, sections)
+
+        dest = numpy.array([])
+        for sub_vec in sub_vec_bs:
+            sub_dest = self.cuda_hamming_dist(vec_a, sub_vec)
+            dest = numpy.concatenate((dest, sub_dest))
+
+        return dest
+            
+    def cuda_hamming_dist(self, vec_a, vec_b):
+
+        #dest = numpy.zeros_like(vec_b)
+        dest = numpy.array(vec_b)
+        length = numpy.array([vec_b.shape[0]]).astype(numpy.uint64)
+        self.hamming_dist(
+                drv.In(vec_a), drv.InOut(dest), drv.In(length),
+                block = self.block, grid = self.grid)
+        
+        #print dest
+        
+        return dest
 
 

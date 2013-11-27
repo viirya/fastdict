@@ -9,10 +9,11 @@ import json
 import numpy as np
 import struct
 import time
+import pickle
 
 from storage import storage
 
-import cuda_hamming
+from cuda_hamming import CudaHamming
 
 try:
     from bitarray import bitarray
@@ -68,8 +69,9 @@ class LSHash(object):
         self._init_hashtables()
 
 
-        self.loaded_keys = []
-        self.load_keys()
+        self.loaded_keys = None
+
+        self.cuda_hamming = CudaHamming()
 
     def _init_uniform_planes(self):
         """ Initialize uniform planes used to calculate the hashes
@@ -218,12 +220,45 @@ class LSHash(object):
             table.append_val(self._hash(self.uniform_planes[i], input_point),
                              value)
 
+    def load_index(self, filename):
+
+        file_exist = os.path.isfile(filename)
+        if file_exist:
+            try:
+                #npzfiles = np.load(filename)
+                f = open(filename)
+                self.hash_tables = pickle.load(f)
+                self.load_keys()
+                f.close()
+            except IOError:
+                print("Cannot load specified file as a numpy array")
+                raise
+            #else:
+            #    npzfiles = sorted(npzfiles.items(), key=lambda x: x[0])
+            #    self.hash_tables = [t[1] for t in npzfiles]
+
+    def save_index(self, filename):
+
+        f = open(filename, 'w')
+
+        tables = [table
+                  for i, table in enumerate(self.hash_tables)]
+
+        try:
+            #np.savez_compressed(filename, tables)
+            pickle.dump(tables, f)
+            f.close()
+        except IOError:
+            print("IOError when saving matrices to specificed path")
+            raise
+
     def load_keys(self):
 
         print "loading keys..."
+        self.loaded_keys = []
         for i, table in enumerate(self.hash_tables):
             keys = table.keys()
-            self.loaded_keys.append(np.array(keys))
+            self.loaded_keys.append(np.array(keys).astype(np.uint64))
 
     def fetch_extra_data(self, hamming_candidates):
 
@@ -268,10 +303,13 @@ class LSHash(object):
             if self.num_hashtables == 1:
                 candidates = []
 
+            if self.loaded_keys == None:
+                self.load_keys()
+
             for i, table in enumerate(self.hash_tables):
                 binary_hash = self._hash(self.uniform_planes[i], query_point)
-                keys = None
-                if i in self.loaded_keys:
+                keys = []
+                if self.loaded_keys != None and i < len(self.loaded_keys):
                     keys = self.loaded_keys[i]
                 else:
                     keys = table.keys()
@@ -295,15 +333,16 @@ class LSHash(object):
                 #binary_hash = struct.unpack("<Q", binary_hash)[0]
                 #binary_hash = np.array([binary_hash]).astype(np.uint64)
 
-                binary_codes = []
+                binary_codes = self.loaded_keys[0]
                 #for ix in candidates:
                     #binary_code = struct.unpack("<Q", ix[0])[0]
                     #binary_codes.append(binary_code)
-                binary_codes = np.array(self.loaded_keys[0]).astype(np.uint64)
+                #binary_codes = np.array(self.loaded_keys[0]).astype(np.uint64)
 
                 print "cuda processing..."
                 start = time.clock()
-                hamming_distances = cuda_hamming.cuda_hamming_dist(binary_hash, binary_codes)
+                #hamming_distances = self.cuda_hamming.cuda_hamming_dist(binary_hash, binary_codes)
+                hamming_distances = self.cuda_hamming.multi_iteration(binary_hash, binary_codes)
                 elapsed = (time.clock() - start)
                 print elapsed
 
