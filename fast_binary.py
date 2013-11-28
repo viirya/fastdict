@@ -102,7 +102,7 @@ def main():
             lsh.save_index(args.e)
     elif args.e != None and args.s == 'dict':
         lsh.load_index(args.e)
-    else:
+    elif args.s != 'redis':
         print "Please specify generated indexing file, or use redis mode."
         sys.exit(0)
 

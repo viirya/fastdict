@@ -71,7 +71,7 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
                 drv.In(vec_a), drv.InOut(dest), drv.In(length),
                 block = self.block, grid = self.grid)
         
-        #print dest
+        print dest
         
         return dest
 
