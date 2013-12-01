@@ -5,6 +5,10 @@
 # the MIT License: http://www.opensource.org/licenses/mit-license.php
 
 import json
+import numpy as np
+import struct
+
+from bitarray import bitarray
 
 try:
     import redis
@@ -20,6 +24,8 @@ def storage(storage_config, index):
     """
     if 'dict' in storage_config:
         return InMemoryStorage(storage_config['dict'])
+    elif 'random' in storage_config:
+        return RandomInMemoryStorage(storage_config['random'])
     elif 'redis' in storage_config:
         storage_config['redis']['db'] = index
         return RedisStorage(storage_config['redis'])
@@ -84,7 +90,54 @@ class InMemoryStorage(BaseStorage):
     def get_list(self, key):
         return self.storage.get(key, [])
 
+class RandomInMemoryStorage(InMemoryStorage):
+    def __init__(self, config):
+        self.name = 'random'
+        self.storage = dict()
 
+        self.init_key_dimension(config['r'], config['dim'])
+        self.init_bases(config['r'])
+
+    def init_key_dimension(self, num_of_r, dim):
+        self.key_dimensions = np.sort(np.random.choice(dim, num_of_r, replace = False))
+
+    def init_bases(self, num_of_r):
+        self.bases = np.left_shift(1, range(0, num_of_r))
+
+    def neighbor_keys(self, key):
+        actual_key = self.actual_key(key)
+        return np.bitwise_xor(actual_key, self.bases)
+
+    def actual_key(self, key):
+        key_binary = np.binary_repr(key, width = 64)
+        bits = bitarray(key_binary)
+
+        actual_key_bits = []
+        for dim in self.key_dimensions:
+            actual_key_bits.append(bits[dim])
+
+        actual_key_binary = bitarray(actual_key_bits)
+        string = struct.unpack("<I", actual_key_binary.tobytes())[0]
+        actual_key = np.array([string]).astype(np.uint32)[0]
+
+        return actual_key
+ 
+    def set_val(self, key, val):
+        actual_key = self.actual_key(key)
+        self.storage[actual_key] = (key, val)
+
+    def get_val(self, key):
+        actual_key = self.actual_key(key)
+        return self.storage[actual_key]
+
+    def get_neighbor_vals(self, key):
+        neighbor_keys = self.neighbor_keys(key)
+        vals = []
+        for neighbor_key in neighbor_keys:
+            vals.append(self.storage[neighbor_key])
+
+        return np.array(vals)
+    
 class RedisStorage(BaseStorage):
     def __init__(self, config):
         if not redis:
