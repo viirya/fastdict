@@ -31,14 +31,14 @@ This repo uses modified [LSHash](https://github.com/kayzh/LSHash).
 
 Parameters:
 
-*-f: image feature file
-*-v: feature file format
-*-n: number of image features to read
-*-k: retrieve top-k neighbors
-*-o: offset of reading features (begin from offset)
-*-s: storage method (dict, redis, random)
-*-i: whether runing indexing (y/n), default is 'n'
-*-e: indexing file for writing (when -i 'y') and reading (when -i 'n')
+* -f: image feature file
+* -v: feature file format
+* -n: number of image features to read
+* -k: retrieve top-k neighbors
+* -o: offset of reading features (begin from offset)
+* -s: storage method (dict, redis, random)
+* -i: whether runing indexing (y/n), default is 'n'
+* -e: indexing file for writing (when -i 'y') and reading (when -i 'n')
 
 
 
