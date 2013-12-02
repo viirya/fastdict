@@ -27,3 +27,18 @@ This repo uses modified [LSHash](https://github.com/kayzh/LSHash).
 
 	python fast_binary.py -f sift_base.fvecs
 
+	python fast_binary.py -f bigann_base.bvecs -v bvecs -n 100000000 -k 10 -o 0 -s random -i y -e bigann_100000000.npz
+
+Parameters:
+
+*-f: image feature file
+*-v: feature file format
+*-n: number of image features to read
+*-k: retrieve top-k neighbors
+*-o: offset of reading features (begin from offset)
+*-s: storage method (dict, redis, random)
+*-i: whether runing indexing (y/n), default is 'n'
+*-e: indexing file for writing (when -i 'y') and reading (when -i 'n')
+
+
+
