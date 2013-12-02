@@ -150,7 +150,7 @@ class RandomInMemoryStorage(InMemoryStorage):
         if snd_extend == True:
             extends_n_keys = neighbor_keys
             for n_key in neighbor_keys:
-                extends_n_keys = np.append(extends_n_keys, np.bitwise_xor(actual_key, self.bases))
+                extends_n_keys = np.append(extends_n_keys, np.bitwise_xor(n_key, self.bases))
             
             neighbor_keys = extends_n_keys
 
