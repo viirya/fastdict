@@ -98,9 +98,9 @@ def main():
 
     if args.i == 'y':
         index(lsh, np_feature_vecs, off)
-        if args.e != None and args.s == 'dict':
+        if args.e != None and (args.s == 'dict' or args.s == 'random'):
             lsh.save_index(args.e)
-    elif args.e != None and args.s == 'dict':
+    elif args.e != None and (args.s == 'dict' or args.s == 'random'):
         lsh.load_index(args.e)
     elif args.s != 'redis':
         print "Please specify generated indexing file, or use redis mode."

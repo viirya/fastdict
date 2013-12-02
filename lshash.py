@@ -60,6 +60,9 @@ class LSHash(object):
             storage_config = {'dict': None}
         self.storage_config = {storage_config: {}}
 
+        if storage_config == 'random':
+            self.storage_config = {'random': {'r': 32, 'dim': 64}}
+
         if matrices_filename and not matrices_filename.endswith('.npz'):
             raise ValueError("The specified file name must end with .npz")
         self.matrices_filename = matrices_filename
@@ -252,12 +255,15 @@ class LSHash(object):
             print("IOError when saving matrices to specificed path")
             raise
 
-    def load_keys(self):
+    def load_keys(self, key = None):
+
+        if 'random' in self.storage_config and key == None: 
+            return
 
         print "loading keys..."
         self.loaded_keys = []
         for i, table in enumerate(self.hash_tables):
-            keys = table.keys()
+            keys = table.keys(key)
             self.loaded_keys.append(np.array(keys).astype(np.uint64))
 
     def fetch_extra_data(self, hamming_candidates):
@@ -267,7 +273,8 @@ class LSHash(object):
         for cand in hamming_candidates:
             key = cand[0]
             dist = cand[1]
-            candidates.append([key, table.get_list(key), dist])
+            binary_code = cand[2]
+            candidates.append([key, table.get_list(key, binary_code), dist])
 
         return candidates
 
@@ -312,7 +319,8 @@ class LSHash(object):
                 if self.loaded_keys != None and i < len(self.loaded_keys):
                     keys = self.loaded_keys[i]
                 else:
-                    keys = table.keys()
+                    if not 'random' in self.storage_config:
+                        keys = table.keys()
                 #for key in table.keys():
                 for key in keys:
                     if self.num_hashtables == 1:
@@ -327,6 +335,9 @@ class LSHash(object):
                 d_func = LSHash.hamming_dist
                 binary_hash = np.array([self._hash(self.uniform_planes[0], query_point)]).astype(np.uint64)
 
+                if 'random' in self.storage_config:
+                    self.load_keys(binary_hash)
+
                 #candidates = [(ix, int(d_func(binary_hash, ix[0])))
                 #              for ix in candidates]
 
@@ -334,6 +345,8 @@ class LSHash(object):
                 #binary_hash = np.array([binary_hash]).astype(np.uint64)
 
                 binary_codes = self.loaded_keys[0]
+                print binary_codes.shape
+
                 #for ix in candidates:
                     #binary_code = struct.unpack("<Q", ix[0])[0]
                     #binary_codes.append(binary_code)
@@ -343,13 +356,14 @@ class LSHash(object):
                 start = time.clock()
                 #hamming_distances = self.cuda_hamming.cuda_hamming_dist(binary_hash, binary_codes)
                 hamming_distances = self.cuda_hamming.multi_iteration(binary_hash, binary_codes)
+                #hamming_distances = self.cuda_hamming.run_kernel_on_gpus(binary_hash, binary_codes)
                 elapsed = (time.clock() - start)
                 print elapsed
 
                 hamming_candidates = []
                 idx = 0
                 for dist in hamming_distances:
-                    hamming_candidates.append((self.loaded_keys[0][idx], dist))
+                    hamming_candidates.append((self.loaded_keys[0][idx], dist, binary_codes[idx]))
                     idx += 1
 
                 hamming_candidates.sort(key=lambda x: x[1])

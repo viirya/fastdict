@@ -130,6 +130,34 @@ class RandomInMemoryStorage(InMemoryStorage):
         actual_key = self.actual_key(key)
         return self.storage[actual_key]
 
+    def append_val(self, key, val):
+        actual_key = self.actual_key(key)
+        self.storage.setdefault(actual_key, []).append((key, val))
+
+    def get_list(self, key, filter_code):
+        actual_key = self.actual_key(key)
+
+        vals = []
+        for key_value in self.storage[actual_key]:
+            if filter_code == key_value[0]:
+                vals.append(key_value[1])
+
+        return vals
+
+    def keys(self, reference_key):
+        neighbor_keys = self.neighbor_keys(reference_key)
+        actual_key = self.actual_key(reference_key)
+
+        all_keys = np.append(neighbor_keys, actual_key)
+        
+        keys = []
+        for short_key in all_keys:
+            if short_key in self.storage:
+                for key_value in self.storage[short_key]:
+                    keys.append(key_value[0])
+
+        return keys
+ 
     def get_neighbor_vals(self, key):
         neighbor_keys = self.neighbor_keys(key)
         vals = []
