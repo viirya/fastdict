@@ -144,11 +144,18 @@ class RandomInMemoryStorage(InMemoryStorage):
 
         return vals
 
-    def keys(self, reference_key):
+    def keys(self, reference_key, snd_extend = True):
         neighbor_keys = self.neighbor_keys(reference_key)
-        actual_key = self.actual_key(reference_key)
 
-        all_keys = np.append(neighbor_keys, actual_key)
+        if snd_extend == True:
+            extends_n_keys = neighbor_keys
+            for n_key in neighbor_keys:
+                extends_n_keys = np.append(extends_n_keys, np.bitwise_xor(actual_key, self.bases))
+            
+            neighbor_keys = extends_n_keys
+
+        actual_key = self.actual_key(reference_key)
+        all_keys = np.unique(np.append(neighbor_keys, actual_key))
         
         keys = []
         for short_key in all_keys:
