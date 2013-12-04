@@ -55,8 +55,10 @@ def index(lsh, np_feature_vecs, label_idx):
 
     print "indexing..."
 
-    for vec in np_feature_vecs:
-        lsh.index(vec, extra_data = 'vec' + str(label_idx))
+    #for vec in np_feature_vecs:
+    for index in range(np_feature_vecs.shape[0] - 1, -1, -1):    
+        lsh.index(np_feature_vecs[index], extra_data = 'vec' + str(label_idx))
+        np_feature_vecs = numpy.delete(np_feature_vecs, index)        
         label_idx += 1
 
     print "indexing done."
@@ -100,19 +102,20 @@ def main():
         index(lsh, np_feature_vecs, off)
         if args.e != None and (args.s == 'dict' or args.s == 'random'):
             lsh.save_index(args.e)
-    elif args.e != None and (args.s == 'dict' or args.s == 'random'):
-        lsh.load_index(args.e)
-    elif args.s != 'redis':
-        print "Please specify generated indexing file, or use redis mode."
-        sys.exit(0)
-
-        #index = 0
-        #for vec in np_feature_vecs:
-        #    lsh.index(vec, extra_data = 'vec' + str(index))
-        #    index += 1
-
-    retrived = lsh.query(np_feature_vecs[0], num_results = int(args.k), distance_func = 'hamming')
-    print retrived
+    else:
+        if args.e != None and (args.s == 'dict' or args.s == 'random'):
+            lsh.load_index(args.e)
+        elif args.s != 'redis':
+            print "Please specify generated indexing file, or use redis mode."
+            sys.exit(0)
+        
+            #index = 0
+            #for vec in np_feature_vecs:
+            #    lsh.index(vec, extra_data = 'vec' + str(index))
+            #    index += 1
+        
+        retrived = lsh.query(np_feature_vecs[0], num_results = int(args.k), distance_func = 'hamming')
+        print retrived
 
 if __name__ == "__main__":
     main()

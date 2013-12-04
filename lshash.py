@@ -336,7 +336,11 @@ class LSHash(object):
                 binary_hash = np.array([self._hash(self.uniform_planes[0], query_point)]).astype(np.uint64)
 
                 if 'random' in self.storage_config:
+                    print "fetch keys..."
+                    start = time.clock()
                     self.load_keys(binary_hash)
+                    elapsed = (time.clock() - start)
+                    print "time: " + str(elapsed)
 
                 #candidates = [(ix, int(d_func(binary_hash, ix[0])))
                 #              for ix in candidates]
@@ -358,7 +362,7 @@ class LSHash(object):
                 hamming_distances = self.cuda_hamming.multi_iteration(binary_hash, binary_codes)
                 #hamming_distances = self.cuda_hamming.run_kernel_on_gpus(binary_hash, binary_codes)
                 elapsed = (time.clock() - start)
-                print elapsed
+                print "time: " + str(elapsed)
 
                 hamming_candidates = []
                 idx = 0
