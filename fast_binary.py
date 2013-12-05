@@ -9,7 +9,7 @@ import argparse
 
 from lshash import LSHash
 
-def load_features(filename, file_format, total_nuse, dimension, offset = 0):
+def load_features(filename, file_format, total_nuse, dimension, lsh, offset = 0, run_index = 'n'):
 
     np_feature_vecs = None
     actual_total_nuse = 0
@@ -26,8 +26,6 @@ def load_features(filename, file_format, total_nuse, dimension, offset = 0):
 
         (feature_vecs, actual_nuse) = yutils.load_vectors_fmt(filename, file_format, dimension, nuse, feature_idx_begin , verbose = True)
 
-        actual_total_nuse += int(actual_nuse)
-
         part_np_feature_vecs = None
 
         if file_format == 'fvecs':
@@ -37,16 +35,23 @@ def load_features(filename, file_format, total_nuse, dimension, offset = 0):
 
         part_np_feature_vecs = part_np_feature_vecs.reshape((int(actual_nuse), dimension))
 
-        if np_feature_vecs != None:
-            np_feature_vecs = numpy.concatenate((np_feature_vecs, part_np_feature_vecs))
+        if run_index != 'y':
+            if np_feature_vecs != None:
+                np_feature_vecs = numpy.concatenate((np_feature_vecs, part_np_feature_vecs))
+            else:
+                np_feature_vecs = part_np_feature_vecs
         else:
-            np_feature_vecs = part_np_feature_vecs
+            index(lsh, part_np_feature_vecs, actual_total_nuse)        
+            del part_np_feature_vecs
+
+        actual_total_nuse += int(actual_nuse)
 
         #np_feature_vecs = numpy.concatenate((np_feature_vecs, part_np_feature_vecs))
     
     #np_feature_vecs = np_feature_vecs.reshape((actual_total_nuse, dimension))
 
-    print np_feature_vecs.shape
+    if run_index != 'y':
+        print np_feature_vecs.shape
 
     return np_feature_vecs
 
@@ -55,10 +60,10 @@ def index(lsh, np_feature_vecs, label_idx):
 
     print "indexing..."
 
-    #for vec in np_feature_vecs:
-    for index in range(np_feature_vecs.shape[0] - 1, -1, -1):    
-        lsh.index(np_feature_vecs[index], extra_data = 'vec' + str(label_idx))
-        np_feature_vecs = numpy.delete(np_feature_vecs, index)        
+    #while np_feature_vecs.shape[0] > 0:
+    for vec in np_feature_vecs:
+        lsh.index(vec, extra_data = 'vec' + str(label_idx))
+        #np_feature_vecs = numpy.delete(np_feature_vecs, 0, 0) 
         label_idx += 1
 
     print "indexing done."
@@ -94,12 +99,11 @@ def main():
 
     #np_feature_vecs = np_feature_vecs.reshape((nuse, d))
     
-    np_feature_vecs = load_features(args.f, args.v, nuse, d, off)
-
     lsh = LSHash(64, d, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
+    np_feature_vecs = load_features(args.f, args.v, nuse, d, lsh, off, args.i)
 
     if args.i == 'y':
-        index(lsh, np_feature_vecs, off)
+        #index(lsh, np_feature_vecs, off)
         if args.e != None and (args.s == 'dict' or args.s == 'random'):
             lsh.save_index(args.e)
     else:
