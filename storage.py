@@ -162,9 +162,10 @@ class RandomInMemoryStorage(InMemoryStorage):
         all_keys = np.unique(np.append(neighbor_keys, actual_key))
         
         keys = []
+        storage_keys = self.storage.keys()
         for short_key in all_keys:
             short_key = int(short_key)
-            if short_key in self.storage.keys():
+            if short_key in storage_keys:
                 for key_value in self.storage.get(short_key):
                     keys.append(key_value.first)
 
