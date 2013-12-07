@@ -34,5 +34,21 @@ print f_dict.keys()
 for key in f_dict.keys():
     print "key: " + str(key)
 
+fastdict.save("test.dict", f_dict)
+
+f_dict = fastdict.FastDict()
+
+print f_dict.size()
+
+fastdict.load("test.dict", f_dict)
+
+print f_dict.size()
+
+for ele in f_dict.get(123):
+    print ele
+    print ele.first
+    print ele.second
+
+
 
  
