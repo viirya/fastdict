@@ -46,10 +46,6 @@ def load_features(filename, file_format, total_nuse, dimension, lsh, offset = 0,
 
         actual_total_nuse += int(actual_nuse)
 
-        #np_feature_vecs = numpy.concatenate((np_feature_vecs, part_np_feature_vecs))
-    
-    #np_feature_vecs = np_feature_vecs.reshape((actual_total_nuse, dimension))
-
     if run_index != 'y':
         print np_feature_vecs.shape
 
@@ -60,10 +56,8 @@ def index(lsh, np_feature_vecs, label_idx):
 
     print "indexing..."
 
-    #while np_feature_vecs.shape[0] > 0:
     for vec in np_feature_vecs:
         lsh.index(vec, extra_data = 'vec' + str(label_idx))
-        #np_feature_vecs = numpy.delete(np_feature_vecs, 0, 0) 
         label_idx += 1
 
     print "indexing done."
@@ -89,16 +83,6 @@ def main():
     nuse = int(args.n)
     off = int(args.o)
 
-    #(feature_vecs, n) = yutils.load_vectors_fmt(args.f, args.v, d, nuse, off, verbose = True)
-
-    #np_feature_vecs = None
-    #if args.v == 'fvecs':
-    #    np_feature_vecs = yael.fvec_to_numpy(feature_vecs, nuse * d)
-    #elif args.v == 'bvecs':
-    #    np_feature_vecs = yael.bvec_to_numpy(feature_vecs, nuse * d)
-
-    #np_feature_vecs = np_feature_vecs.reshape((nuse, d))
-    
     lsh = LSHash(64, d, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
     np_feature_vecs = load_features(args.f, args.v, nuse, d, lsh, off, args.i)
 
@@ -112,12 +96,7 @@ def main():
         elif args.s != 'redis':
             print "Please specify generated indexing file, or use redis mode."
             sys.exit(0)
-        
-            #index = 0
-            #for vec in np_feature_vecs:
-            #    lsh.index(vec, extra_data = 'vec' + str(index))
-            #    index += 1
-        
+
         retrived = lsh.query(np_feature_vecs[0], num_results = int(args.k), distance_func = 'hamming')
         print retrived
 

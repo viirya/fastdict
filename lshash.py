@@ -225,6 +225,13 @@ class LSHash(object):
 
     def load_index(self, filename):
 
+        print "loading index..."
+
+        if 'random' in self.storage_config:
+            for i, table in enumerate(self.hash_tables):
+                table.load(filename + "_" + str(i) + ".dict")
+            return
+
         file_exist = os.path.isfile(filename)
         if file_exist:
             try:
@@ -241,6 +248,11 @@ class LSHash(object):
             #    self.hash_tables = [t[1] for t in npzfiles]
 
     def save_index(self, filename):
+
+        if 'random' in self.storage_config:
+            for i, table in enumerate(self.hash_tables):
+                table.save(filename + "_" + str(i) + ".dict")
+            return
 
         f = open(filename, 'w')
 

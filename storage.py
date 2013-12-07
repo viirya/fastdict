@@ -8,6 +8,8 @@ import json
 import numpy as np
 import struct
 
+import fastdict
+
 from bitarray import bitarray
 
 try:
@@ -93,13 +95,14 @@ class InMemoryStorage(BaseStorage):
 class RandomInMemoryStorage(InMemoryStorage):
     def __init__(self, config):
         self.name = 'random'
-        self.storage = dict()
+        self.storage = fastdict.FastDict()
 
         self.init_key_dimension(config['r'], config['dim'])
         self.init_bases(config['r'])
 
     def init_key_dimension(self, num_of_r, dim):
         self.key_dimensions = np.sort(np.random.choice(dim, num_of_r, replace = False))
+        self.storage.set_keydimensions(self.key_dimensions.tolist())
 
     def init_bases(self, num_of_r):
         self.bases = np.left_shift(1, range(0, num_of_r))
@@ -124,23 +127,23 @@ class RandomInMemoryStorage(InMemoryStorage):
  
     def set_val(self, key, val):
         actual_key = self.actual_key(key)
-        self.storage[actual_key] = (key, val)
+        self.storage.set(int(actual_key), long(key), val)
 
     def get_val(self, key):
         actual_key = self.actual_key(key)
-        return self.storage[actual_key]
+        return self.storage.get(int(actual_key))
 
     def append_val(self, key, val):
         actual_key = self.actual_key(key)
-        self.storage.setdefault(actual_key, []).append((key, val))
+        self.storage.append(int(actual_key), long(key), val)
 
     def get_list(self, key, filter_code):
         actual_key = self.actual_key(key)
 
         vals = []
-        for key_value in self.storage[actual_key]:
-            if filter_code == key_value[0]:
-                vals.append(key_value[1])
+        for key_value in self.storage.get(int(actual_key)):
+            if filter_code == key_value.first:
+                vals.append(key_value.second)
 
         return vals
 
@@ -155,13 +158,15 @@ class RandomInMemoryStorage(InMemoryStorage):
             neighbor_keys = extends_n_keys
 
         actual_key = self.actual_key(reference_key)
+
         all_keys = np.unique(np.append(neighbor_keys, actual_key))
         
         keys = []
         for short_key in all_keys:
-            if short_key in self.storage:
-                for key_value in self.storage[short_key]:
-                    keys.append(key_value[0])
+            short_key = int(short_key)
+            if short_key in self.storage.keys():
+                for key_value in self.storage.get(short_key):
+                    keys.append(key_value.first)
 
         return keys
  
@@ -169,9 +174,20 @@ class RandomInMemoryStorage(InMemoryStorage):
         neighbor_keys = self.neighbor_keys(key)
         vals = []
         for neighbor_key in neighbor_keys:
-            vals.append(self.storage[neighbor_key])
+            vals.append(self.storage.get(int(neighbor_key)))
 
         return np.array(vals)
+
+    def save(self, filename):
+        fastdict.save(filename, self.storage)
+
+    def load(self, filename):
+        fastdict.load(filename, self.storage)
+        key_dimensions = []
+        self.storage.get_keydimensions(key_dimensions)
+        self.key_dimensions = np.array(key_dimensions)
+ 
+
     
 class RedisStorage(BaseStorage):
     def __init__(self, config):

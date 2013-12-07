@@ -1,17 +1,22 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <list>
 #include <utility>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/serialization/list.hpp>
 #include <fstream>
 
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <boost/python/module.hpp>
 #include <boost/python/def.hpp>
 #include <boost/python/implicit.hpp>
+
+#include <boost/python.hpp>
+
 
 class FastDict
 {
@@ -46,12 +51,26 @@ public:
         return keys;
     }
 
+    void set_keydimensions(boost::python::list& dimensions) {
+        for (int i = 0; i < len(dimensions); ++i) {
+            key_dimensions.insert(key_dimensions.end(), boost::python::extract<int>(dimensions[i]));
+        }
+    }
+
+    void get_keydimensions(boost::python::list& dimensions) {
+        BOOST_FOREACH(uint32_t dim, key_dimensions) {
+            dimensions.append(dim);
+        }
+    }
+
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version) {
         ar & dict;
+        ar & key_dimensions;
     }
 
     std::map<uint32_t, std::vector<std::pair<uint64_t, std::string> > > dict;
+    std::vector<uint32_t> key_dimensions;
 };
 
 void save(char* filename, FastDict dict) {
@@ -59,6 +78,7 @@ void save(char* filename, FastDict dict) {
 
    boost::archive::text_oarchive oa(ofs);
    oa << dict.dict;
+   oa << dict.key_dimensions;
 }
 
 void load(char* filename, FastDict& dict) {
@@ -66,10 +86,10 @@ void load(char* filename, FastDict& dict) {
 
     boost::archive::text_iarchive ia(ifs);
     ia >> dict.dict;
+    ia >> dict.key_dimensions;
 
 }
 
-#include <boost/python.hpp>
 using namespace boost::python;
 
 BOOST_PYTHON_MODULE(fastdict)
@@ -80,6 +100,8 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("append", &FastDict::append)
         .def("size", &FastDict::size)
         .def("keys", &FastDict::keys)
+        .def("set_keydimensions", &FastDict::set_keydimensions)
+        .def("get_keydimensions", &FastDict::get_keydimensions)
     ;
 
     class_<std::vector<std::pair<uint64_t, std::string> > >("PairVec")
@@ -94,6 +116,7 @@ BOOST_PYTHON_MODULE(fastdict)
     class_<std::vector<uint32_t> >("ShorKeyVec")
         .def(vector_indexing_suite<std::vector<uint32_t> >())
     ;
+ 
 
     def("save", save);
     def("load", load);

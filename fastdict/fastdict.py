@@ -34,6 +34,8 @@ print f_dict.keys()
 for key in f_dict.keys():
     print "key: " + str(key)
 
+f_dict.set_keydimensions([1, 2, 3])
+
 fastdict.save("test.dict", f_dict)
 
 f_dict = fastdict.FastDict()
@@ -49,6 +51,10 @@ for ele in f_dict.get(123):
     print ele.first
     print ele.second
 
+key_dimensions = []
 
+print f_dict.get_keydimensions(key_dimensions)
+
+print key_dimensions
 
  
