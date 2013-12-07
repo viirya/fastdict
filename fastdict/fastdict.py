@@ -27,4 +27,12 @@ for ele in f_dict.get(123):
     print ele.first
     print ele.second
 
+f_dict.set(456, 789, 'vec2')
+
+print f_dict.keys()
+
+for key in f_dict.keys():
+    print "key: " + str(key)
+
+
  

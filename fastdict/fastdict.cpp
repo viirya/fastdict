@@ -27,6 +27,16 @@ struct FastDict
         dict[key].insert(dict[key].begin(), element);
     }
 
+    std::vector<uint32_t> keys() {
+        std::pair<uint32_t, std::vector<std::pair<uint64_t, std::string> > > me;
+        std::vector<uint32_t> keys;
+        BOOST_FOREACH(me, dict) {
+            keys.push_back(me.first);
+        }
+
+        return keys;
+    }
+
     std::map<uint32_t, std::vector<std::pair<uint64_t, std::string> > > dict;
 };
 
@@ -40,6 +50,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("set", &FastDict::set)
         .def("append", &FastDict::append)
         .def("size", &FastDict::size)
+        .def("keys", &FastDict::keys)
     ;
 
     class_<std::vector<std::pair<uint64_t, std::string> > >("PairVec")
@@ -51,6 +62,9 @@ BOOST_PYTHON_MODULE(fastdict)
         .def_readwrite("second", &std::pair<uint64_t, std::string>::second)
     ;
 
+    class_<std::vector<uint32_t> >("ShorKeyVec")
+        .def(vector_indexing_suite<std::vector<uint32_t> >())
+    ;
 
 }
 
