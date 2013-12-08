@@ -57,4 +57,13 @@ print f_dict.get_keydimensions(key_dimensions)
 
 print key_dimensions
 
+print f_dict.exist(123)
+print f_dict.exist(12345)
+
+for ele in f_dict.get(12345):
+    print ele
+    print ele.first
+    print ele.second
+
+
  

@@ -33,7 +33,23 @@ public:
         dict[key] = element_list;
     }
 
-    std::vector<std::pair<uint64_t, std::string> > get(uint32_t key) { return dict[key]; }
+    std::vector<std::pair<uint64_t, std::string> > get(uint32_t key) {
+        if (dict.count(key) > 0)
+            return dict[key];
+        else {
+            std::pair<uint64_t, std::string> element(0, "");
+            std::vector<std::pair<uint64_t, std::string> > element_list(1, element);
+            return element_list;
+        }
+    }
+
+    bool exist(uint32_t key) {
+        if (dict.count(key) > 0)
+            return true;
+        else
+            return false;
+    }
+
     uint32_t size() { return dict.size(); }
 
     void append(uint32_t key, uint64_t hash_key, std::string id) {
@@ -102,6 +118,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("keys", &FastDict::keys)
         .def("set_keydimensions", &FastDict::set_keydimensions)
         .def("get_keydimensions", &FastDict::get_keydimensions)
+        .def("exist", &FastDict::exist)
     ;
 
     class_<std::vector<std::pair<uint64_t, std::string> > >("PairVec")
