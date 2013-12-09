@@ -141,9 +141,10 @@ class RandomInMemoryStorage(InMemoryStorage):
         actual_key = self.actual_key(key)
 
         vals = []
-        for key_value in self.storage.get(int(actual_key)):
-            if filter_code == key_value.first:
-                vals.append(key_value.second)
+        if self.storage.exist(int(actual_key)):
+            for key_value in self.storage.get(int(actual_key)):
+                if str(filter_code) == str(key_value.first):
+                    vals.append(key_value.second)
 
         return vals
 
@@ -167,7 +168,7 @@ class RandomInMemoryStorage(InMemoryStorage):
             short_key = int(short_key)
             if self.storage.exist(short_key):
                 for key_value in self.storage.get(short_key):
-                    keys.append(key_value.first)
+                    keys.append(str(key_value.first))
 
         return keys
  

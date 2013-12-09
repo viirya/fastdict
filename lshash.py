@@ -285,8 +285,8 @@ class LSHash(object):
         for cand in hamming_candidates:
             key = cand[0]
             dist = cand[1]
-            binary_code = cand[2]
-            candidates.append([key, table.get_list(key, binary_code), dist])
+            #binary_code = cand[2]
+            candidates.append([key, table.get_list(key, key), dist])
 
         return candidates
 
@@ -379,7 +379,7 @@ class LSHash(object):
                 hamming_candidates = []
                 idx = 0
                 for dist in hamming_distances:
-                    hamming_candidates.append((self.loaded_keys[0][idx], dist, binary_codes[idx]))
+                    hamming_candidates.append((self.loaded_keys[0][idx], dist))
                     idx += 1
 
                 hamming_candidates.sort(key=lambda x: x[1])
