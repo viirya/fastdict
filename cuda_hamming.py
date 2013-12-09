@@ -3,7 +3,6 @@ import pycuda.driver as drv
 import numpy
 
 from pycuda.compiler import SourceModule
- 
 
 class CudaHamming(object):
 
@@ -44,7 +43,7 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         self.hamming_dist = self.mod.get_function("hamming_dist")
 
         self.block = block
-        self.grid = grid
+        self.grid = grid             
 
     def multi_iteration(self, vec_a, vec_b):
 
@@ -67,6 +66,7 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         #dest = numpy.zeros_like(vec_b)
         dest = numpy.array(vec_b)
         length = numpy.array([vec_b.shape[0]]).astype(numpy.uint64)
+
         self.hamming_dist(
                 drv.In(vec_a), drv.InOut(dest), drv.In(length),
                 block = self.block, grid = self.grid)

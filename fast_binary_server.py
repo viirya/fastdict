@@ -7,6 +7,10 @@ import timeit
 import time
 import argparse
 
+import tornado.ioloop
+import tornado.web
+
+
 from lshash import LSHash
 
 def load_features(filename, file_format, total_nuse, dimension, offset = 0):
@@ -26,8 +30,6 @@ def load_features(filename, file_format, total_nuse, dimension, offset = 0):
 
         (feature_vecs, actual_nuse) = yutils.load_vectors_fmt(filename, file_format, dimension, nuse, feature_idx_begin , verbose = True)
 
-        actual_total_nuse += int(actual_nuse)
-
         part_np_feature_vecs = None
 
         if file_format == 'fvecs':
@@ -42,69 +44,61 @@ def load_features(filename, file_format, total_nuse, dimension, offset = 0):
         else:
             np_feature_vecs = part_np_feature_vecs
 
-        #np_feature_vecs = numpy.concatenate((np_feature_vecs, part_np_feature_vecs))
-    
-    #np_feature_vecs = np_feature_vecs.reshape((actual_total_nuse, dimension))
+        actual_total_nuse += int(actual_nuse)
 
     print np_feature_vecs.shape
 
     return np_feature_vecs
 
+def init():
 
-def index(lsh, np_feature_vecs, label_idx):
+    parser = argparse.ArgumentParser(description = 'Tools for hamming distance-based image retrieval by cuda')
+    parser.add_argument('-f', help = 'The filename of image raw features (SIFT).')
+    parser.add_argument('-v', default = 'fvecs', help = 'The format of image raw features.')
+    parser.add_argument('-s', default = 'dict', help = 'The method of indexing storage.')
+    parser.add_argument('-d', default = '128', help = 'Dimensions of raw image feature.')
+    parser.add_argument('-o', default = '0', help = 'Offset of accessing raw image features.')
+    parser.add_argument('-n', default = '1', help = 'Number of raw image features to read.')
+    parser.add_argument('-i', default = 'n', help = 'Whether to perform indexing step.')
+    parser.add_argument('-e', help = 'The filename of indexing file.')
+    parser.add_argument('-k', default = '10', help = 'Number of retrieved images.')
 
-    print "indexing..."
+    args = parser.parse_args()
 
-    for vec in np_feature_vecs:
-        lsh.index(vec, extra_data = 'vec' + str(label_idx))
-        label_idx += 1
+    d = int(args.d)
+    nuse = int(args.n)
+    off = int(args.o)
 
-    print "indexing done."
+    lsh = LSHash(64, d, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
+    np_feature_vecs = load_features(args.f, args.v, nuse, d, off)
 
-    return label_idx
+    if args.e != None and (args.s == 'dict' or args.s == 'random'):
+        lsh.load_index(args.e)
+    elif args.s != 'redis':
+        print "Please specify generated indexing file, or use redis mode."
+        sys.exit(0)
+
+    return (lsh, np_feature_vecs, args)
 
 
-parser = argparse.ArgumentParser(description = 'Tools for hamming distance-based image retrieval by cuda')
-parser.add_argument('-f', help = 'The filename of image raw features (SIFT).')
-parser.add_argument('-v', default = 'fvecs', help = 'The format of image raw features.')
-parser.add_argument('-s', default = 'dict', help = 'The method of indexing storage.')
-parser.add_argument('-d', default = '128', help = 'Dimensions of raw image feature.')
-parser.add_argument('-o', default = '0', help = 'Offset of accessing raw image features.')
-parser.add_argument('-n', default = '1', help = 'Number of raw image features to read.')
-parser.add_argument('-i', default = 'n', help = 'Whether to perform indexing step.')
-parser.add_argument('-e', help = 'The filename of indexing file.')
-parser.add_argument('-k', default = '10', help = 'Number of retrieved images.')
+(lsh, np_feature_vecs, args) = init()
 
-args = parser.parse_args()
-
-d = int(args.d)
-nuse = int(args.n)
-off = int(args.o)
-
-np_feature_vecs = load_features(args.f, args.v, nuse, d, off)
-
-lsh = LSHash(64, d, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
-
-if args.i == 'y':
-    index(lsh, np_feature_vecs, off)
-    if args.e != None and args.s == 'dict':
-        lsh.save_index(args.e)
-elif args.e != None and args.s == 'dict':
-    lsh.load_index(args.e)
-elif args.s != 'redis':
-    print "Please specify generated indexing file, or use redis mode."
-    sys.exit(0)
-
-# initiate API server
-app = Flask(__name__)
-@app.route('/search/<vec_id>', methods = ['GET'])
-def search(vec_id):
-    if long(vec_id) < np_feature_vecs.shape[0]:
-        retrived = lsh.query(np_feature_vecs[long(vec_id)], num_results = int(args.k), distance_func = 'hamming')
+class QueryHandler(tornado.web.RequestHandler):
+    def get(self, image_id):
+        self.write("You requested the image: " + image_id)
+ 
+        retrived = lsh.query(np_feature_vecs[long(image_id)], num_results = int(args.k), distance_func = 'hamming')
+        self.write(retrived)
         print retrived
-    else:
-        print "out of query vectors' range."
+ 
+
+application = tornado.web.Application([
+    (r"/query/([0-9]+)", QueryHandler),
+])    
+
 
 if __name__ == "__main__":
-    app.run(debug = True)
+    application.listen(8888)
+    tornado.ioloop.IOLoop.instance().start()
+
 
