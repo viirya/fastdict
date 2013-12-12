@@ -78,6 +78,8 @@ def init():
         print "Please specify generated indexing file, or use redis mode."
         sys.exit(0)
 
+    print "indexing done. Ready for querying."
+
     return (lsh, np_feature_vecs, args)
 
 
@@ -88,7 +90,7 @@ class QueryHandler(tornado.web.RequestHandler):
         self.write("You requested the image: " + image_id)
  
         retrived = lsh.query(np_feature_vecs[long(image_id)], num_results = int(args.k), distance_func = 'hamming')
-        self.write(retrived)
+        self.write(str(retrived))
         print retrived
  
 
