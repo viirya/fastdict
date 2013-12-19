@@ -50,6 +50,21 @@ public:
             return false;
     }
 
+    void clear() { dict.clear(); }
+
+    void merge(FastDict& source) {
+
+        std::pair<uint32_t, std::vector<std::pair<uint64_t, std::string> > > me;
+        std::vector<uint32_t> keys;
+        BOOST_FOREACH(me, source.dict) {
+            std::pair<uint64_t, std::string> element;
+            BOOST_FOREACH(element, me.second) {
+                dict[me.first].insert(dict[me.first].begin(), element);
+            }
+        }
+
+    }
+
     uint32_t size() { return dict.size(); }
 
     void append(uint32_t key, uint64_t hash_key, std::string id) {
@@ -119,6 +134,8 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("set_keydimensions", &FastDict::set_keydimensions)
         .def("get_keydimensions", &FastDict::get_keydimensions)
         .def("exist", &FastDict::exist)
+        .def("clear", &FastDict::clear)
+        .def("merge", &FastDict::merge)
     ;
 
     class_<std::vector<std::pair<uint64_t, std::string> > >("PairVec")

@@ -45,7 +45,30 @@ print f_dict.size()
 fastdict.load("test.dict", f_dict)
 
 print f_dict.size()
+ 
+f_dict_merge_source = fastdict.FastDict()
 
+f_dict_merge_source.set(789, 123, 'vec3')
+
+print f_dict_merge_source.size()
+ 
+for key in f_dict_merge_source.keys():
+    print "key: " + str(key)
+
+f_dict.merge(f_dict_merge_source)
+
+print "merged: "
+print f_dict.size()
+
+f_dict_merge_source.clear()
+
+print f_dict_merge_source.size()
+ 
+for ele in f_dict.get(789):
+    print ele
+    print ele.first
+    print ele.second
+ 
 for ele in f_dict.get(123):
     print ele
     print ele.first
