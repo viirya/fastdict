@@ -5,11 +5,12 @@ import yutils
 import yael
 import timeit
 import time
+import os
 import argparse
 
 from lshash import LSHash
 
-def load_features(filename, file_format, total_nuse, dimension, lsh, offset = 0, run_index = 'n'):
+def load_features(filename, file_format, total_nuse, dimension, lsh, index_folder, offset = 0, run_index = 'n'):
 
     np_feature_vecs = None
     actual_total_nuse = 0
@@ -43,6 +44,8 @@ def load_features(filename, file_format, total_nuse, dimension, lsh, offset = 0,
         else:
             index(lsh, part_np_feature_vecs, actual_total_nuse)        
             del part_np_feature_vecs
+            if index_folder != None:
+                save_index(lsh, index_folder, feature_idx_begin)
 
         actual_total_nuse += int(actual_nuse)
 
@@ -64,6 +67,17 @@ def index(lsh, np_feature_vecs, label_idx):
 
     return label_idx
 
+def save_index(lsh, base_folder, file_index):
+
+    print "saving index file to " + base_folder + '/' + str(file_index)
+    
+    if not os.access(base_folder, os.R_OK):    
+        os.makedirs(base_folder)
+    lsh.save_index(base_folder + '/' + str(file_index))
+
+    print "saving done."
+
+
 def main():
 
     parser = argparse.ArgumentParser(description = 'Tools for hamming distance-based image retrieval by cuda')
@@ -74,7 +88,7 @@ def main():
     parser.add_argument('-o', default = '0', help = 'Offset of accessing raw image features.')
     parser.add_argument('-n', default = '1', help = 'Number of raw image features to read.')
     parser.add_argument('-i', default = 'n', help = 'Whether to perform indexing step.')
-    parser.add_argument('-e', help = 'The filename of indexing file.')
+    parser.add_argument('-e', help = 'The dirname of indexing folder.')
     parser.add_argument('-k', default = '10', help = 'Number of retrieved images.')
 
     args = parser.parse_args()
@@ -84,7 +98,7 @@ def main():
     off = int(args.o)
 
     lsh = LSHash(64, d, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
-    np_feature_vecs = load_features(args.f, args.v, nuse, d, lsh, off, args.i)
+    np_feature_vecs = load_features(args.f, args.v, nuse, d, lsh, args.e, off, args.i)
 
     if args.i == 'y':
         #index(lsh, np_feature_vecs, off)

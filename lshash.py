@@ -9,6 +9,7 @@ import json
 import numpy as np
 import struct
 import time
+import re
 import pickle
 
 from storage import storage
@@ -223,13 +224,25 @@ class LSHash(object):
             table.append_val(self._hash(self.uniform_planes[i], input_point),
                              value)
 
-    def load_index(self, filename):
+    def load_index(self, dirname):
 
         print "loading index..."
 
         if 'random' in self.storage_config:
-            for i, table in enumerate(self.hash_tables):
-                table.load(filename + "_" + str(i) + ".dict")
+            onlyfiles = [ f for f in os.listdir(dirname) if os.path.isfile(os.path.join(dirname, f)) ]
+
+            for afile in onlyfiles:
+                m = re.search('(.*)_(\d)\.dict', afile)
+
+                print "loading " + dirname + '/' + afile + " ..."
+
+                self.hash_tables[int(m.group(2))].load(dirname + '/' + afile)
+
+                #for i, table in enumerate(self.hash_tables):
+                #    table.load(filename + "_" + str(i) + ".dict")
+
+            print "loading done."
+
             return
 
         file_exist = os.path.isfile(filename)
@@ -252,6 +265,7 @@ class LSHash(object):
         if 'random' in self.storage_config:
             for i, table in enumerate(self.hash_tables):
                 table.save(filename + "_" + str(i) + ".dict")
+                table.clear()
             return
 
         f = open(filename, 'w')
