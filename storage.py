@@ -137,7 +137,7 @@ class RandomInMemoryStorage(InMemoryStorage):
 
     def append_val(self, key, val):
         actual_key = self.actual_key(key)
-        self.storage.append(int(actual_key), long(key), long(val))
+        self.storage.append(int(actual_key), long(key), int(val))
 
     def get_list(self, key, filter_code):
         actual_key = self.actual_key(key)

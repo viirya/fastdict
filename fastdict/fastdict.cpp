@@ -158,29 +158,29 @@ BOOST_PYTHON_MODULE(fastdict)
     def("save", save<std::string>);
     def("load", load<std::string>);
 
-    class_<FastDict<uint64_t> >("FastIntDict")
-        .def("get", &FastDict<uint64_t>::get)
-        .def("set", &FastDict<uint64_t>::set)
-        .def("append", &FastDict<uint64_t>::append)
-        .def("size", &FastDict<uint64_t>::size)
-        .def("keys", &FastDict<uint64_t>::keys)
-        .def("set_keydimensions", &FastDict<uint64_t>::set_keydimensions)
-        .def("get_keydimensions", &FastDict<uint64_t>::get_keydimensions)
-        .def("exist", &FastDict<uint64_t>::exist)
-        .def("clear", &FastDict<uint64_t>::clear)
-        .def("merge", &FastDict<uint64_t>::merge)
+    class_<FastDict<uint32_t> >("FastIntDict")
+        .def("get", &FastDict<uint32_t>::get)
+        .def("set", &FastDict<uint32_t>::set)
+        .def("append", &FastDict<uint32_t>::append)
+        .def("size", &FastDict<uint32_t>::size)
+        .def("keys", &FastDict<uint32_t>::keys)
+        .def("set_keydimensions", &FastDict<uint32_t>::set_keydimensions)
+        .def("get_keydimensions", &FastDict<uint32_t>::get_keydimensions)
+        .def("exist", &FastDict<uint32_t>::exist)
+        .def("clear", &FastDict<uint32_t>::clear)
+        .def("merge", &FastDict<uint32_t>::merge)
     ;
 
-    class_<std::vector<std::pair<uint64_t, uint64_t> > >("PairIntVec")
-        .def(vector_indexing_suite<std::vector<std::pair<uint64_t, uint64_t> > >())
+    class_<std::vector<std::pair<uint64_t, uint32_t> > >("PairIntVec")
+        .def(vector_indexing_suite<std::vector<std::pair<uint64_t, uint32_t> > >())
     ;                                                           
 
-    class_<std::pair<uint64_t, uint64_t> >("HashIntPair")
-        .def_readwrite("first", &std::pair<uint64_t, uint64_t>::first)
-        .def_readwrite("second", &std::pair<uint64_t, uint64_t>::second)
+    class_<std::pair<uint64_t, uint32_t> >("HashIntPair")
+        .def_readwrite("first", &std::pair<uint64_t, uint32_t>::first)
+        .def_readwrite("second", &std::pair<uint64_t, uint32_t>::second)
     ;
 
-    def("save_int", save<uint64_t>);
-    def("load_int", load<uint64_t>);
+    def("save_int", save<uint32_t>);
+    def("load_int", load<uint32_t>);
 }
 

@@ -100,11 +100,7 @@ def main():
     lsh = LSHash(64, d, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
     np_feature_vecs = load_features(args.f, args.v, nuse, d, lsh, args.e, off, args.i)
 
-    if args.i == 'y':
-        #index(lsh, np_feature_vecs, off)
-        if args.e != None and (args.s == 'dict' or args.s == 'random'):
-            lsh.save_index(args.e)
-    else:
+    if args.i != 'y':
         if args.e != None and (args.s == 'dict' or args.s == 'random'):
             lsh.load_index(args.e)
         elif args.s != 'redis':
