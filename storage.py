@@ -95,9 +95,9 @@ class InMemoryStorage(BaseStorage):
 class RandomInMemoryStorage(InMemoryStorage):
     def __init__(self, config):
         self.name = 'random'
-        self.storage = fastdict.FastDict()
+        self.storage = fastdict.FastIntDict()
 
-        self.load_dict = fastdict.FastDict()
+        self.load_dict = fastdict.FastIntDict()
 
         self.init_key_dimension(config['r'], config['dim'])
         self.init_bases(config['r'])
@@ -137,7 +137,7 @@ class RandomInMemoryStorage(InMemoryStorage):
 
     def append_val(self, key, val):
         actual_key = self.actual_key(key)
-        self.storage.append(int(actual_key), long(key), val)
+        self.storage.append(int(actual_key), long(key), long(val))
 
     def get_list(self, key, filter_code):
         actual_key = self.actual_key(key)
@@ -183,15 +183,15 @@ class RandomInMemoryStorage(InMemoryStorage):
         return np.array(vals)
 
     def save(self, filename):
-        fastdict.save(filename, self.storage)
+        fastdict.save_int(filename, self.storage)
 
     def load(self, filename):
         if self.storage.size() > 0:
-            fastdict.load(filename, self.load_dict)
+            fastdict.load_int(filename, self.load_dict)
             self.storage.merge(self.load_dict) 
             self.load_dict.clear()
         else:
-            fastdict.load(filename, self.storage)
+            fastdict.load_int(filename, self.storage)
             key_dimensions = []
             self.storage.get_keydimensions(key_dimensions)
             self.key_dimensions = np.array(key_dimensions)

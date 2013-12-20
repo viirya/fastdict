@@ -60,7 +60,7 @@ def index(lsh, np_feature_vecs, label_idx):
     print "indexing..."
 
     for vec in np_feature_vecs:
-        lsh.index(vec, extra_data = 'vec' + str(label_idx))
+        lsh.index(vec, extra_data = label_idx)
         label_idx += 1
 
     print "indexing done."
