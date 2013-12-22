@@ -99,11 +99,14 @@ class RandomInMemoryStorage(InMemoryStorage):
 
         self.load_dict = fastdict.FastIntDict()
 
-        self.init_key_dimension(config['r'], config['dim'])
+        self.init_key_dimension(config['r'], config['dim'], config['random'])
         self.init_bases(config['r'])
 
-    def init_key_dimension(self, num_of_r, dim):
-        self.key_dimensions = np.sort(np.random.choice(dim, num_of_r, replace = False))
+    def init_key_dimension(self, num_of_r, dim, random = True):
+        if random:
+            self.key_dimensions = np.sort(np.random.choice(dim, num_of_r, replace = False))
+        else:
+            self.key_dimensions = np.sort(range(0, num_of_r))
         self.storage.set_keydimensions(self.key_dimensions.tolist())
 
     def init_bases(self, num_of_r):

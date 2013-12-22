@@ -62,7 +62,7 @@ class LSHash(object):
         self.storage_config = {storage_config: {}}
 
         if storage_config == 'random':
-            self.storage_config = {'random': {'r': 32, 'dim': 64}}
+            self.storage_config = {'random': {'r': 32, 'dim': 64, 'random': True}}
 
         if matrices_filename and not matrices_filename.endswith('.npz'):
             raise ValueError("The specified file name must end with .npz")
