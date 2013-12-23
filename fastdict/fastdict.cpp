@@ -24,19 +24,24 @@ class FastDict
 
 public:
     
-    FastDict() {}
+    FastDict(uint8_t k_dim) : index_key_dimension(k_dim) {}
 
     friend class boost::serialization::access;
 
     void set(uint32_t key, uint64_t hash_key, IdType id) {
+
+        std::vector<bool> bool_key = actual_key(key);
+
         std::pair<uint64_t, IdType> element(hash_key, id);
         std::vector<std::pair<uint64_t, IdType> > element_list(1, element);
-        dict[key] = element_list;
+        dict[bool_key] = element_list;
     }
 
     std::vector<std::pair<uint64_t, IdType> > get(uint32_t key) {
-        if (dict.count(key) > 0)
-            return dict[key];
+        std::vector<bool> bool_key = actual_key(key);
+
+        if (dict.count(bool_key) > 0)
+            return dict[bool_key];
         else {
             std::pair<uint64_t, IdType> element(0, *new IdType());
             std::vector<std::pair<uint64_t, IdType> > element_list(1, element);
@@ -45,7 +50,9 @@ public:
     }
 
     bool exist(uint32_t key) {
-        if (dict.count(key) > 0)
+        std::vector<bool> bool_key = actual_key(key);
+
+        if (dict.count(bool_key) > 0)
             return true;
         else
             return false;
@@ -55,8 +62,7 @@ public:
 
     void merge(FastDict<IdType>& source) {
 
-        std::pair<uint32_t, std::vector<std::pair<uint64_t, IdType> > > me;
-        std::vector<uint32_t> keys;
+        std::pair<std::vector<bool>, std::vector<std::pair<uint64_t, IdType> > > me;
         BOOST_FOREACH(me, source.dict) {
             std::pair<uint64_t, IdType> element;
             BOOST_FOREACH(element, me.second) {
@@ -69,15 +75,17 @@ public:
     uint32_t size() { return dict.size(); }
 
     void append(uint32_t key, uint64_t hash_key, IdType id) {
+        std::vector<bool> bool_key = actual_key(key);
+
         std::pair<uint64_t, IdType> element(hash_key, id);
-        dict[key].insert(dict[key].begin(), element);
+        dict[bool_key].insert(dict[bool_key].begin(), element);
     }
 
     std::vector<uint32_t> keys() {
-        std::pair<uint32_t, std::vector<std::pair<uint64_t, IdType> > > me;
+        std::pair<std::vector<bool>, std::vector<std::pair<uint64_t, IdType> > > me;
         std::vector<uint32_t> keys;
         BOOST_FOREACH(me, dict) {
-            keys.push_back(me.first);
+            keys.push_back(python_key(me.first));
         }
 
         return keys;
@@ -95,14 +103,44 @@ public:
         }
     }
 
+    // because we allow python program to retrieve elements in this dictionary by int (or long?) key
+    // we should generate actual key from uint32_t (or uint64_t) key of python
+    std::vector<bool> actual_key(uint32_t python_key) {
+        std::vector<bool> key;
+        for (int i = 0; i < index_key_dimension; ++i) {
+            if ((python_key & 0x01) == 1)
+                key.insert(key.begin(), true);
+            else 
+                key.insert(key.begin(), false);
+            python_key = python_key >> 1;
+        }            
+        return key;
+    }
+
+    uint32_t python_key(std::vector<bool> key) {
+        uint32_t p_key = 0;
+        BOOST_FOREACH(bool dim, key) {
+            if (dim)
+                p_key = (p_key << 1) + 1;
+            else 
+                p_key = (p_key << 1) + 0;
+        }
+        return p_key;
+    }
+
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version) {
         ar & dict;
         ar & key_dimensions;
+        ar & index_key_dimension;
     }
 
-    std::map<uint32_t, std::vector<std::pair<uint64_t, IdType> > > dict;
+    // internally, we use a vector of bool values as key of indexing (dictionary)
+
+    std::map<std::vector<bool>, std::vector<std::pair<uint64_t, IdType> > > dict;
     std::vector<uint32_t> key_dimensions;
+
+    uint8_t index_key_dimension;
 };
 
 template <class IdType>
@@ -112,6 +150,7 @@ void save(char* filename, FastDict<IdType> dict) {
    boost::archive::text_oarchive oa(ofs);
    oa << dict.dict;
    oa << dict.key_dimensions;
+   oa << dict.index_key_dimension;
 }
 
 template <class IdType>
@@ -121,6 +160,7 @@ void load(char* filename, FastDict<IdType>& dict) {
     boost::archive::text_iarchive ia(ifs);
     ia >> dict.dict;
     ia >> dict.key_dimensions;
+    ia >> dict.index_key_dimension;
 
 }
 
@@ -128,7 +168,7 @@ using namespace boost::python;
 
 BOOST_PYTHON_MODULE(fastdict)
 {
-    class_<FastDict<std::string> >("FastDict")
+    class_<FastDict<std::string> >("FastDict", init<uint8_t>())
         .def("get", &FastDict<std::string>::get)
         .def("set", &FastDict<std::string>::set)
         .def("append", &FastDict<std::string>::append)
@@ -158,7 +198,7 @@ BOOST_PYTHON_MODULE(fastdict)
     def("save", save<std::string>);
     def("load", load<std::string>);
 
-    class_<FastDict<uint32_t> >("FastIntDict")
+    class_<FastDict<uint32_t> >("FastIntDict", init<uint8_t>())
         .def("get", &FastDict<uint32_t>::get)
         .def("set", &FastDict<uint32_t>::set)
         .def("append", &FastDict<uint32_t>::append)

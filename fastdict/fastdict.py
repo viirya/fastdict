@@ -2,7 +2,7 @@
 
 import fastdict
 
-f_dict = fastdict.FastDict()
+f_dict = fastdict.FastDict(32)
 f_dict.set(123, 456, 'vec0')
 print f_dict.size()
 
@@ -38,7 +38,7 @@ f_dict.set_keydimensions([1, 2, 3])
 
 fastdict.save("test.dict", f_dict)
 
-f_dict = fastdict.FastDict()
+f_dict = fastdict.FastDict(32)
 
 print f_dict.size()
 
@@ -46,7 +46,7 @@ fastdict.load("test.dict", f_dict)
 
 print f_dict.size()
  
-f_dict_merge_source = fastdict.FastDict()
+f_dict_merge_source = fastdict.FastDict(32)
 
 f_dict_merge_source.set(789, 123, 'vec3')
 
