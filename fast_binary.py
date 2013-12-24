@@ -90,14 +90,16 @@ def main():
     parser.add_argument('-i', default = 'n', help = 'Whether to perform indexing step.')
     parser.add_argument('-e', help = 'The dirname of indexing folder.')
     parser.add_argument('-k', default = '10', help = 'Number of retrieved images.')
+    parser.add_argument('-r', default = '32', help = 'Number of dimensions randomly sampled.')
 
     args = parser.parse_args()
 
     d = int(args.d)
     nuse = int(args.n)
     off = int(args.o)
+    random_dims = int(args.r)
 
-    lsh = LSHash(64, d, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
+    lsh = LSHash(64, d, random_dims, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
     np_feature_vecs = load_features(args.f, args.v, nuse, d, lsh, args.e, off, args.i)
 
     if args.i != 'y':

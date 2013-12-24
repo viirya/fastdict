@@ -102,6 +102,8 @@ class RandomInMemoryStorage(InMemoryStorage):
         self.init_key_dimension(config['r'], config['dim'], config['random'])
         self.init_bases(config['r'])
 
+        self.config = config
+
     def init_key_dimension(self, num_of_r, dim, random = True):
         if random:
             self.key_dimensions = np.sort(np.random.choice(dim, num_of_r, replace = False))
@@ -125,6 +127,8 @@ class RandomInMemoryStorage(InMemoryStorage):
         actual_key_bits = []
         for dim in self.key_dimensions:
             actual_key_bits.append(bits[dim])
+
+        actual_key_bits = np.zeros(32 - len(actual_key_bits)).astype(np.int).tolist() + actual_key_bits
 
         actual_key_binary = bitarray(actual_key_bits)
         string = struct.unpack("<I", actual_key_binary.tobytes())[0]

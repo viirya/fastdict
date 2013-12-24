@@ -30,7 +30,7 @@ public:
 
     void set(uint32_t key, uint64_t hash_key, IdType id) {
 
-        std::vector<bool> bool_key = actual_key(key);
+        std::vector<uint8_t> bool_key = actual_key(key);
 
         std::pair<uint64_t, IdType> element(hash_key, id);
         std::vector<std::pair<uint64_t, IdType> > element_list(1, element);
@@ -38,7 +38,7 @@ public:
     }
 
     std::vector<std::pair<uint64_t, IdType> > get(uint32_t key) {
-        std::vector<bool> bool_key = actual_key(key);
+        std::vector<uint8_t> bool_key = actual_key(key);
 
         if (dict.count(bool_key) > 0)
             return dict[bool_key];
@@ -50,7 +50,7 @@ public:
     }
 
     bool exist(uint32_t key) {
-        std::vector<bool> bool_key = actual_key(key);
+        std::vector<uint8_t> bool_key = actual_key(key);
 
         if (dict.count(bool_key) > 0)
             return true;
@@ -62,7 +62,7 @@ public:
 
     void merge(FastDict<IdType>& source) {
 
-        std::pair<std::vector<bool>, std::vector<std::pair<uint64_t, IdType> > > me;
+        std::pair<std::vector<uint8_t>, std::vector<std::pair<uint64_t, IdType> > > me;
         BOOST_FOREACH(me, source.dict) {
             std::pair<uint64_t, IdType> element;
             BOOST_FOREACH(element, me.second) {
@@ -75,14 +75,14 @@ public:
     uint32_t size() { return dict.size(); }
 
     void append(uint32_t key, uint64_t hash_key, IdType id) {
-        std::vector<bool> bool_key = actual_key(key);
+        std::vector<uint8_t> bool_key = actual_key(key);
 
         std::pair<uint64_t, IdType> element(hash_key, id);
         dict[bool_key].insert(dict[bool_key].begin(), element);
     }
 
     std::vector<uint32_t> keys() {
-        std::pair<std::vector<bool>, std::vector<std::pair<uint64_t, IdType> > > me;
+        std::pair<std::vector<uint8_t>, std::vector<std::pair<uint64_t, IdType> > > me;
         std::vector<uint32_t> keys;
         BOOST_FOREACH(me, dict) {
             keys.push_back(python_key(me.first));
@@ -105,25 +105,41 @@ public:
 
     // because we allow python program to retrieve elements in this dictionary by int (or long?) key
     // we should generate actual key from uint32_t (or uint64_t) key of python
-    std::vector<bool> actual_key(uint32_t python_key) {
-        std::vector<bool> key;
+    std::vector<uint8_t> actual_key(uint32_t python_key) {
+        std::vector<uint8_t> key;
+        uint8_t current_bits = 0;
+
         for (int i = 0; i < index_key_dimension; ++i) {
+
             if ((python_key & 0x01) == 1)
-                key.insert(key.begin(), true);
-            else 
-                key.insert(key.begin(), false);
+                current_bits = current_bits + (0x01 << (i % 8));
+
             python_key = python_key >> 1;
+
+            if ((i + 1) % 8 == 0) {
+                key.insert(key.begin(), current_bits);
+                current_bits = 0;
+            }
         }            
         return key;
     }
 
-    uint32_t python_key(std::vector<bool> key) {
+    uint32_t python_key(std::vector<uint8_t> key) {
         uint32_t p_key = 0;
-        BOOST_FOREACH(bool dim, key) {
-            if (dim)
-                p_key = (p_key << 1) + 1;
-            else 
-                p_key = (p_key << 1) + 0;
+        uint8_t cur_bit = 0;
+
+        for (std::vector<uint8_t>::reverse_iterator rit = key.rbegin(); rit != key.rend(); ++rit) {
+            uint8_t bits = *rit;
+
+            for (uint8_t i = 0; i < 8; i++) {
+
+                if ((bits & 0x01) == 1)
+                    p_key = p_key + (0x01 << cur_bit);
+
+                cur_bit++;
+
+                bits = bits >> 1;
+            }
         }
         return p_key;
     }
@@ -135,9 +151,9 @@ public:
         ar & index_key_dimension;
     }
 
-    // internally, we use a vector of bool values as key of indexing (dictionary)
+    // internally, we use a vector of uint8_t values as key of indexing (dictionary)
 
-    std::map<std::vector<bool>, std::vector<std::pair<uint64_t, IdType> > > dict;
+    std::map<std::vector<uint8_t>, std::vector<std::pair<uint64_t, IdType> > > dict;
     std::vector<uint32_t> key_dimensions;
 
     uint8_t index_key_dimension;
