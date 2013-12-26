@@ -3,6 +3,7 @@
 #include <vector>
 #include <list>
 #include <utility>
+#include <algorithm>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/serialization/map.hpp>
@@ -160,6 +161,87 @@ public:
 };
 
 template <class IdType>
+class FastCompressDict: public FastDict<IdType> {
+
+public:
+    typedef FastDict<IdType> super;
+
+    FastCompressDict(uint8_t k_dim) : FastDict<IdType>(k_dim) {}
+
+    friend class boost::serialization::access;
+
+    void merge(FastCompressDict<IdType>& source) {
+
+        std::pair<std::vector<uint8_t>, std::vector<std::pair<uint64_t, IdType> > > me;
+        BOOST_FOREACH(me, source.dict) {
+            std::pair<uint64_t, IdType> element;
+            BOOST_FOREACH(element, me.second) {
+                super::dict[me.first].insert(super::dict[me.first].begin(), element);
+            }
+        }
+
+    }
+
+    bool sort_func(std::pair<uint64_t, IdType> first, std::pair<uint64_t, IdType> second) {
+        return (first.first < second.first);
+    }
+
+    void go_index() {
+
+        // sorting
+        std::pair<std::vector<uint8_t>, std::vector<std::pair<uint64_t, IdType> > > me;
+        BOOST_FOREACH(me, super::dict) {
+            // sort binart codes in each bucket
+            std::sort(me.second.begin(), me.second.end(), sort_func);
+        }
+
+        // generate column-based representation for binary codes in each bucket
+        BOOST_FOREACH(me, super::dict) {
+            // for binary codes in each bucket
+            std::vector<std::vector<uint8_t> > columns(64, new std::vector<uint8_t>());
+            std::pair<uint64_t, IdType> element;
+
+            BOOST_FOREACH(element, me.second) {
+                uint64_t binary_code = element.first;
+
+                for (uint8_t i = 0; i < 64; i++) {
+                    if ((binary_code & 0x01) == 1) {
+                        columns[i].push_back(1);    
+                    } else {
+                        columns[i].push_back(0);
+                    }
+                    binary_code = binary_code >> 1; 
+                }
+            }
+
+            //  compress data
+            std::vector<std::vector<uint8_t> > compress_data(64, new std::vector<uint8_t>());
+            uint8_t column_index = 0;
+            BOOST_FOREACH(std::vector<uint8_t> column, columns) {
+                //  scan each column to compress the data
+                uint8_t prev_repeat_bit = 0;
+                uint8_t repeat_count = 0;
+                BOOST_FOREACH(uint8_t bit, column) {
+                    if (bit == prev_repeat_bit) {
+                        repeat_count++;
+                    } else {
+                        compress_data[column_index].push_back(repeat_count);        
+                        prev_repeat_bit = bit;
+                        repeat_count = 1;
+                    }
+                }
+                column_index++;
+            }
+        }
+
+        
+
+    }
+
+
+};
+
+template <class IdType>
 void save(char* filename, FastDict<IdType> dict) {
    std::ofstream ofs(filename);
 
@@ -179,7 +261,28 @@ void load(char* filename, FastDict<IdType>& dict) {
     ia >> dict.index_key_dimension;
 
 }
+ 
+template <class IdType>
+void save_compress(char* filename, FastCompressDict<IdType> dict) {
+   std::ofstream ofs(filename);
 
+   boost::archive::text_oarchive oa(ofs);
+   oa << dict.dict;
+   oa << dict.key_dimensions;
+   oa << dict.index_key_dimension;
+}
+
+template <class IdType>
+void load_compress(char* filename, FastCompressDict<IdType>& dict) {
+    std::ifstream ifs(filename);
+
+    boost::archive::text_iarchive ia(ifs);
+    ia >> dict.dict;
+    ia >> dict.key_dimensions;
+    ia >> dict.index_key_dimension;
+
+}
+ 
 using namespace boost::python;
 
 BOOST_PYTHON_MODULE(fastdict)
@@ -238,5 +341,22 @@ BOOST_PYTHON_MODULE(fastdict)
 
     def("save_int", save<uint32_t>);
     def("load_int", load<uint32_t>);
+
+    class_<FastCompressDict<uint32_t> >("FastCompressIntDict", init<uint8_t>())
+        .def("get", &FastCompressDict<uint32_t>::get)
+        .def("set", &FastCompressDict<uint32_t>::set)
+        .def("append", &FastCompressDict<uint32_t>::append)
+        .def("size", &FastCompressDict<uint32_t>::size)
+        .def("keys", &FastCompressDict<uint32_t>::keys)
+        .def("set_keydimensions", &FastCompressDict<uint32_t>::set_keydimensions)
+        .def("get_keydimensions", &FastCompressDict<uint32_t>::get_keydimensions)
+        .def("exist", &FastCompressDict<uint32_t>::exist)
+        .def("clear", &FastCompressDict<uint32_t>::clear)
+        .def("merge", &FastCompressDict<uint32_t>::merge)
+    ;
+ 
+    def("save_compress_int", save_compress<uint32_t>);
+    def("load_compress_int", load_compress<uint32_t>);
+ 
 }
 
