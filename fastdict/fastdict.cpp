@@ -11,6 +11,7 @@
 #include <boost/serialization/list.hpp>
 #include <fstream>
 
+
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <boost/python/module.hpp>
 #include <boost/python/def.hpp>
@@ -160,6 +161,12 @@ public:
     uint8_t index_key_dimension;
 };
 
+
+template <class IdType>
+bool sort_func(std::pair<uint64_t, IdType> first, std::pair<uint64_t, IdType> second) {
+    return (first.first < second.first);
+}
+ 
 template <class IdType>
 class FastCompressDict: public FastDict<IdType> {
 
@@ -182,23 +189,20 @@ public:
 
     }
 
-    bool sort_func(std::pair<uint64_t, IdType> first, std::pair<uint64_t, IdType> second) {
-        return (first.first < second.first);
-    }
-
     void go_index() {
 
         // sorting
         std::pair<std::vector<uint8_t>, std::vector<std::pair<uint64_t, IdType> > > me;
         BOOST_FOREACH(me, super::dict) {
             // sort binart codes in each bucket
-            std::sort(me.second.begin(), me.second.end(), sort_func);
+            std::vector<std::pair<uint64_t, IdType> > vec = me.second;
+            std::sort(me.second.begin(), me.second.end(), sort_func<IdType>);
         }
 
         // generate column-based representation for binary codes in each bucket
         BOOST_FOREACH(me, super::dict) {
             // for binary codes in each bucket
-            std::vector<std::vector<uint8_t> > columns(64, new std::vector<uint8_t>());
+            std::vector<std::vector<uint8_t> > columns(64, *new std::vector<uint8_t>());
             std::pair<uint64_t, IdType> element;
 
             BOOST_FOREACH(element, me.second) {
@@ -213,9 +217,21 @@ public:
                     binary_code = binary_code >> 1; 
                 }
             }
+ 
+            /* for test
+            uint8_t index= 0;
+            BOOST_FOREACH(std::vector<uint8_t> column, columns) {
+                std::cout << int(index++) << ": ";
+                BOOST_FOREACH(uint8_t bit, column) {
+                    std::cout << int(bit) << ' ';
+                } 
+                std::cout << '\n';
+            }
+            index = 0;
+            */
 
             //  compress data
-            std::vector<std::vector<uint8_t> > compress_data(64, new std::vector<uint8_t>());
+            std::vector<std::vector<uint8_t> > compress_data(64, *new std::vector<uint8_t>());
             uint8_t column_index = 0;
             BOOST_FOREACH(std::vector<uint8_t> column, columns) {
                 //  scan each column to compress the data
@@ -230,8 +246,21 @@ public:
                         repeat_count = 1;
                     }
                 }
+                compress_data[column_index].push_back(repeat_count);
                 column_index++;
             }
+
+            /*
+            // test
+            BOOST_FOREACH(std::vector<uint8_t> column, compress_data) {
+                std::cout << int(index++) << ": ";
+                BOOST_FOREACH(uint8_t bit, column) {
+                    std::cout << int(bit) << ' ';
+                } 
+                std::cout << '\n';
+            }
+            */
+
         }
 
         
@@ -353,6 +382,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("exist", &FastCompressDict<uint32_t>::exist)
         .def("clear", &FastCompressDict<uint32_t>::clear)
         .def("merge", &FastCompressDict<uint32_t>::merge)
+        .def("go_index", &FastCompressDict<uint32_t>::go_index)
     ;
  
     def("save_compress_int", save_compress<uint32_t>);

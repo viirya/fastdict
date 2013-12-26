@@ -88,5 +88,6 @@ for ele in f_dict.get(12345):
     print ele.first
     print ele.second
 
+f_dict.go_index()
 
  
