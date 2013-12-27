@@ -62,7 +62,7 @@ class LSHash(object):
         self.storage_config = {storage_config: {}}
 
         if storage_config == 'random':
-            self.storage_config = {'random': {'r': random_dims, 'dim': hash_size, 'random': True}}
+            self.storage_config = {'random': {'r': random_dims, 'dim': hash_size, 'random': False}}
 
         if matrices_filename and not matrices_filename.endswith('.npz'):
             raise ValueError("The specified file name must end with .npz")
@@ -259,6 +259,18 @@ class LSHash(object):
             #else:
             #    npzfiles = sorted(npzfiles.items(), key=lambda x: x[0])
             #    self.hash_tables = [t[1] for t in npzfiles]
+
+    def compress_index(self, dirname):
+        if 'random' in self.storage_config:
+            for i, table in enumerate(self.hash_tables):
+                table.compress()
+                table.save(dirname + '/' + "compressed.cdict")
+                table.clear()
+
+    def load_compress_index(self, dirname):
+        if 'random' in self.storage_config:
+            for i, table in enumerate(self.hash_tables):
+                table.load(dirname + '/' + "compressed.cdict")
 
     def save_index(self, filename):
 

@@ -91,6 +91,8 @@ def main():
     parser.add_argument('-e', help = 'The dirname of indexing folder.')
     parser.add_argument('-k', default = '10', help = 'Number of retrieved images.')
     parser.add_argument('-r', default = '32', help = 'Number of dimensions randomly sampled.')
+    parser.add_argument('-c', default = 'n', help = 'Whether to perform compressing step.')
+ 
 
     args = parser.parse_args()
 
@@ -102,13 +104,20 @@ def main():
     lsh = LSHash(64, d, random_dims, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
     np_feature_vecs = load_features(args.f, args.v, nuse, d, lsh, args.e, off, args.i)
 
-    if args.i != 'y':
-        if args.e != None and (args.s == 'dict' or args.s == 'random'):
+    if args.c == 'y':
+        if args.e != None and args.s == 'random':
             lsh.load_index(args.e)
-        elif args.s != 'redis':
-            print "Please specify generated indexing file, or use redis mode."
+            print "compressing index..."
+            lsh.compress_index(args.e)
+            print "compressing done."
+        else:
+            print "Please specify generated indexing file."
             sys.exit(0)
 
+    if args.c != 'y' and args.i != 'y' and args.e != None and args.s == 'random':
+        print "loading compressed index."
+        lsh.load_compress_index(args.e)
+        print "loading done."
         retrived = lsh.query(np_feature_vecs[0], num_results = int(args.k), distance_func = 'hamming')
         print retrived
 

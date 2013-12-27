@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <unordered_map>
 #include <vector>
 #include <list>
 #include <utility>
@@ -7,6 +8,7 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/serialization/map.hpp>
+#include "./unordered_map.hpp"
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/list.hpp>
 #include <fstream>
@@ -19,6 +21,26 @@
 
 #include <boost/python.hpp>
 
+namespace std {
+
+    template <>
+    struct hash<std::vector<uint8_t>>
+    {
+        std::size_t operator()(const std::vector<uint8_t>& k) const {
+            using std::size_t;
+            using std::hash;
+        
+            size_t hash_code = 0;
+          
+            BOOST_FOREACH(uint8_t element, k) {
+                hash_code += hash<int>()((int)element);
+            }
+
+            return hash_code;
+        }
+    };
+
+}
 
 template <class IdType>
 class FastDict
@@ -181,9 +203,22 @@ public:
         ar & index_key_dimension;
     }
 
+    /*
+
+    void prepare_save() {
+
+        std::pair<std::vector<uint8_t>, std::vector<std::pair<uint64_t, IdType> > > me;
+        BOOST_FOREACH(me, dict) {
+            serialize_dict[me.first] = me.second;
+        }
+
+    } 
+    */   
+
     // internally, we use a vector of uint8_t values as key of indexing (dictionary)
 
-    std::map<std::vector<uint8_t>, std::vector<std::pair<uint64_t, IdType> > > dict;
+    //std::map<std::vector<uint8_t>, std::vector<std::pair<uint64_t, IdType> > > serialize_dict;
+    std::unordered_map<std::vector<uint8_t>, std::vector<std::pair<uint64_t, IdType> > > dict;
     std::vector<uint32_t> key_dimensions;
 
     uint8_t index_key_dimension;

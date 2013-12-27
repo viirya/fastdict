@@ -95,9 +95,9 @@ class InMemoryStorage(BaseStorage):
 class RandomInMemoryStorage(InMemoryStorage):
     def __init__(self, config):
         self.name = 'random'
-        self.storage = fastdict.FastIntDict(config['r'])
+        self.storage = fastdict.FastCompressIntDict(config['r'])
 
-        self.load_dict = fastdict.FastIntDict(config['r'])
+        self.load_dict = fastdict.FastCompressIntDict(config['r'])
 
         self.init_key_dimension(config['r'], config['dim'], config['random'])
         self.init_bases(config['r'])
@@ -125,10 +125,13 @@ class RandomInMemoryStorage(InMemoryStorage):
         bits = bitarray(key_binary)
 
         actual_key_bits = []
+        for empty_dim in range(0, 32 - self.config['r']):
+            actual_key_bits.append(False)
+
         for dim in self.key_dimensions:
             actual_key_bits.append(bits[dim])
 
-        actual_key_bits = np.zeros(32 - len(actual_key_bits)).astype(np.int).tolist() + actual_key_bits
+        #actual_key_bits = np.zeros(32 - len(actual_key_bits)).astype(np.int).tolist() + actual_key_bits
 
         actual_key_binary = bitarray(actual_key_bits)
         string = struct.unpack("<I", actual_key_binary.tobytes())[0]
@@ -146,6 +149,9 @@ class RandomInMemoryStorage(InMemoryStorage):
 
     def append_val(self, key, val):
         actual_key = self.actual_key(key)
+        #print "actual_key: " + str(actual_key)
+        #print "key: " + str(key)
+        #print "val: " + str(val)
         self.storage.append(int(actual_key), long(key), int(val))
 
     def get_list(self, key, filter_code):
@@ -192,18 +198,21 @@ class RandomInMemoryStorage(InMemoryStorage):
         return np.array(vals)
 
     def save(self, filename):
-        fastdict.save_int(filename, self.storage)
+        fastdict.save_compress_int(filename, self.storage)
 
     def load(self, filename):
         if self.storage.size() > 0:
-            fastdict.load_int(filename, self.load_dict)
+            fastdict.load_compress_int(filename, self.load_dict)
             self.storage.merge(self.load_dict) 
             self.load_dict.clear()
         else:
-            fastdict.load_int(filename, self.storage)
+            fastdict.load_compress_int(filename, self.storage)
             key_dimensions = []
             self.storage.get_keydimensions(key_dimensions)
             self.key_dimensions = np.array(key_dimensions)
+
+    def compress(self):
+        self.storage.go_index()
 
     def clear(self):
         self.storage.clear()

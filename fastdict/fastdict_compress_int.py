@@ -90,4 +90,49 @@ for ele in f_dict.get(12345):
 
 f_dict.go_index()
 
+cols = f_dict.get_cols(123)
+col_count = 0
+for column in cols.first:
+    print "col: " + str(col_count)
+    for bit_count in column:
+        print bit_count
+    col_count += 1
+
+for image_id in cols.second:
+    print image_id
+
+
+print f_dict.size()
+ 
+fastdict.save_compress_int("test.dict", f_dict)
+
+f_dict = fastdict.FastCompressIntDict(32)
+print f_dict.size()
+
+cols = f_dict.get_cols(123)
+col_count = 0
+for column in cols.first:
+    print "col: " + str(col_count)
+    for bit_count in column:
+        print bit_count
+    col_count += 1
+
+for image_id in cols.second:
+    print image_id
+
+fastdict.load_compress_int("test.dict", f_dict)
+
+cols = f_dict.get_cols(123)
+col_count = 0
+for column in cols.first:
+    print "col: " + str(col_count)
+    for bit_count in column:
+        print bit_count
+    col_count += 1
+
+for image_id in cols.second:
+    print image_id
+
+
+
  
