@@ -50,7 +50,7 @@ class LSHash(object):
         (optional) Whether to overwrite the matrices file if it already exist
     """
 
-    def __init__(self, hash_size, input_dim, random_dims = 32, num_hashtables=1,
+    def __init__(self, hash_size, input_dim, random_sampling = True, random_dims = 32, num_hashtables=1,
                  storage_config=None, matrices_filename=None, overwrite=False):
 
         self.hash_size = hash_size
@@ -62,7 +62,7 @@ class LSHash(object):
         self.storage_config = {storage_config: {}}
 
         if storage_config == 'random':
-            self.storage_config = {'random': {'r': random_dims, 'dim': hash_size, 'random': False}}
+            self.storage_config = {'random': {'r': random_dims, 'dim': hash_size, 'random': random_sampling}}
 
         if matrices_filename and not matrices_filename.endswith('.npz'):
             raise ValueError("The specified file name must end with .npz")

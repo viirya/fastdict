@@ -6,6 +6,7 @@
 
 import json
 import numpy as np
+import time
 import struct
 
 import fastdict
@@ -146,6 +147,15 @@ class RandomInMemoryStorage(InMemoryStorage):
     def get_val(self, key):
         actual_key = self.actual_key(key)
         return self.storage.get(int(actual_key))
+
+    def benchmark_begin(self, title):
+        print "start to " + title
+        self.start = time.clock()
+ 
+    def benchmark_end(self, title):
+        print "end of " + title
+        elapsed = (time.clock() - self.start)
+        print "time: " + str(elapsed)
 
     def append_val(self, key, val):
         actual_key = self.actual_key(key)

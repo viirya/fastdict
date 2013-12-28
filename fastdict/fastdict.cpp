@@ -75,7 +75,7 @@ public:
         BOOST_FOREACH(me, source.dict) {
             std::pair<uint64_t, IdType> element;
             BOOST_FOREACH(element, me.second) {
-                dict[me.first].insert(dict[me.first].begin(), element);
+                dict[me.first].insert(dict[me.first].end(), element);
             }
         }
 
@@ -87,7 +87,7 @@ public:
         std::vector<uint8_t> bool_key = actual_key(key);
 
         std::pair<uint64_t, IdType> element(hash_key, id);
-        dict[bool_key].insert(dict[bool_key].begin(), element);
+        dict[bool_key].insert(dict[bool_key].end(), element);
     }
 
     std::vector<uint32_t> keys() {
@@ -117,6 +117,7 @@ public:
     std::vector<uint8_t> actual_key(uint32_t python_key) {
         std::vector<uint8_t> key;
         uint8_t current_bits = 0;
+        uint32_t base = 0xFF000000;
 
 
         // for test
@@ -124,9 +125,10 @@ public:
 
         // for efficiency consideration, index_key_dimension should be divisible by 8
 
-        for (int i = 0; i < index_key_dimension / 8; ++i) {
-            key.insert(key.begin(), (uint8_t)(python_key & 0x000000FF));
-            python_key = python_key >> 8;
+        int times = index_key_dimension / 8;
+        for (int i = 0; i < times; ++i) {
+            key.insert(key.end(), (uint8_t)((python_key & base) >> (8 * (times - i - 1))));
+            base = base >> 8;
         }
 
         // for test
@@ -211,7 +213,7 @@ public:
         BOOST_FOREACH(me, source.dict) {
             std::pair<uint64_t, IdType> element;
             BOOST_FOREACH(element, me.second) {
-                super::dict[me.first].insert(super::dict[me.first].begin(), element);
+                super::dict[me.first].insert(super::dict[me.first].end(), element);
             }
         }
 

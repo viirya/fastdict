@@ -92,6 +92,8 @@ def main():
     parser.add_argument('-k', default = '10', help = 'Number of retrieved images.')
     parser.add_argument('-r', default = '32', help = 'Number of dimensions randomly sampled.')
     parser.add_argument('-c', default = 'n', help = 'Whether to perform compressing step.')
+    parser.add_argument('-q', default = 'n', help = 'Whether to sequentially sampling.')
+ 
  
 
     args = parser.parse_args()
@@ -101,7 +103,11 @@ def main():
     off = int(args.o)
     random_dims = int(args.r)
 
-    lsh = LSHash(64, d, random_dims, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
+    random_sampling = True
+    if args.q == 'y':
+        random_sampling = False
+
+    lsh = LSHash(64, d, random_sampling, random_dims, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
     np_feature_vecs = load_features(args.f, args.v, nuse, d, lsh, args.e, off, args.i)
 
     if args.c == 'y':
