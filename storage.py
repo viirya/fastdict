@@ -224,21 +224,41 @@ class RandomInMemoryStorage(InMemoryStorage):
     def compress(self):
         self.storage.go_index()
 
+    def uncompress_binary_codes(self, reference_key):
+ 
+        neighbor_keys = self.neighbor_keys(reference_key)
+        actual_key = self.actual_key(reference_key)
+        all_keys = np.unique(np.append(neighbor_keys, actual_key))
+
+        self.benchmark_begin('uncompressing binary codes') 
+        binary_codes = self.storage.get_binary_codes(int(actual_key))
+        self.benchmark_end('uncompressing binary codes') 
+
+        return binary_codes
+
     def get_compressed_cols(self, reference_key):
     
         neighbor_keys = self.neighbor_keys(reference_key)
         actual_key = self.actual_key(reference_key)
         all_keys = np.unique(np.append(neighbor_keys, actual_key))
 
-        self.benchmark_begin('load cols')
-
         columns = []
+
+        self.benchmark_begin('load cols')
         cols = self.storage.get_cols(int(actual_key))
+        self.benchmark_end('load cols')
+        
+        self.benchmark_begin('cols to np array')
+
         for column in cols.first:
             columns.append(np.array(column).astype(np.uint64))
+        self.benchmark_end('cols to np array')
+ 
+        self.benchmark_begin('cols to np array')
+ 
         np_columns = np.array(columns)
 
-        self.benchmark_end('load cols')
+        self.benchmark_end('cols to np array')
 
         return (np_columns, cols.second)
 

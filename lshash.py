@@ -234,9 +234,11 @@ class LSHash(object):
             for afile in onlyfiles:
                 m = re.search('(.*)_(\d)\.dict', afile)
 
-                print "loading " + dirname + '/' + afile + " ..."
+                if m != None:
+                
+                    print "loading " + dirname + '/' + afile + " ..."
 
-                self.hash_tables[int(m.group(2))].load(dirname + '/' + afile)
+                    self.hash_tables[int(m.group(2))].load(dirname + '/' + afile)
 
                 #for i, table in enumerate(self.hash_tables):
                 #    table.load(filename + "_" + str(i) + ".dict")
@@ -302,6 +304,12 @@ class LSHash(object):
         self.loaded_keys = []
         for i, table in enumerate(self.hash_tables):
             keys = table.keys(key)
+            #keys = table.uncompress_binary_codes(key)
+            #binary_codes = []
+            #for binary_code in keys.first:
+            #    print binary_code
+            #    binary_codes.append(binary_code)
+            #print binary_codes
             self.loaded_keys.append(np.array(keys).astype(np.uint64))
 
     def fetch_extra_data(self, hamming_candidates):

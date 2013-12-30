@@ -122,9 +122,14 @@ def main():
             sys.exit(0)
 
     if args.c != 'y' and args.i != 'y' and args.e != None and args.s == 'random':
-        print "loading compressed index."
-        lsh.load_compress_index(args.e)
-        print "loading done."
+        if args.p == 'y':
+            print "loading compressed index."
+            lsh.load_compress_index(args.e)
+            print "loading done."
+        else:
+            print "loading index."
+            lsh.load_index(args.e)
+            print "loading done."
         if args.p != 'y':
             retrived = lsh.query(np_feature_vecs[0], num_results = int(args.k), distance_func = 'hamming')
         else:

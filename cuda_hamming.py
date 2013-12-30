@@ -113,8 +113,6 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
 
         np_addresses = numpy.array(addresses).astype(numpy.uint64)
 
-        print np_addresses
-        print np_addresses.shape
         # suppose we use 32 bit address space that 1 point costs 4 bytes
         # todo: do we have better way to figure the size of pointer in python?
         arrays_gpu = drv.mem_alloc(np_addresses.shape[0] * 8)
@@ -122,7 +120,6 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         drv.memcpy_htod(arrays_gpu, np_addresses)
 
         distances = numpy.zeros(binary_code_length).astype(numpy.uint64)
-        #distances_gpu = drv.mem_alloc(binary_code_length * distances.dtype.itemsize)
  
         length = numpy.array([binary_code_length]).astype(numpy.uint64)
 
@@ -132,7 +129,6 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
                 drv.In(vec_a), arrays_gpu, drv.In(length), drv.Out(distances),
                 block = self.block, grid = self.grid)
 
-        #drv.memcpy_dtoh(distances, distances_gpu)
         print distances
 
     def multi_iteration(self, vec_a, vec_b):
