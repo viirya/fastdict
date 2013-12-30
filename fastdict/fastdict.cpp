@@ -121,13 +121,13 @@ public:
 
 
         // for test
-        // std::cout << "python key: " << int(python_key) << "\n";
+        // std::cout << "In actual_key() python key: " << int(python_key) << "\n";
 
         // for efficiency consideration, index_key_dimension should be divisible by 8
 
-        int times = index_key_dimension / 8;
-        for (int i = 0; i < times; ++i) {
-            key.insert(key.end(), (uint8_t)((python_key & base) >> (8 * (times - i - 1))));
+        // int times = index_key_dimension / 8;
+        for (int i = 0; i < 4; ++i) {
+            key.insert(key.end(), (uint8_t)((python_key & base) >> (8 * (4 - i - 1))));
             base = base >> 8;
         }
 
@@ -173,6 +173,10 @@ public:
                 bits = bits >> 1;
             }
         }
+
+        // for test
+        // std::cout << "In python_key() python key: " << long(p_key) << "\n";
+
         return p_key;
     }
 
