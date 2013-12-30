@@ -352,6 +352,57 @@ public:
         }
     }
 
+    std::pair<std::vector<uint64_t>, std::vector<IdType> > get_binary_codes(uint32_t key) {
+        std::vector<uint8_t> bool_key = super::actual_key(key);
+        std::vector<uint64_t> binary_codes;
+
+        if (column_dict.count(bool_key) > 0) {
+            uint32_t current_binary_code_num = 0;
+            for (int binary_code_count = 0; binary_code_count < column_dict[bool_key].second.size(); binary_code_count++) {
+                std::vector<uint8_t> column; 
+                uint64_t binary_code = 0x00;
+                uint16_t column_index = 0;
+                BOOST_FOREACH(column, column_dict[bool_key].first) {
+                    uint32_t count_for_bits = 0;
+                    uint8_t bit_type = 0x00;
+                    BOOST_FOREACH(uint8_t bit_counts, column) {
+                        count_for_bits += bit_counts;
+
+                        // for test
+                        // std::cout << "count_for_bits: " << count_for_bits << "\n";
+                        // std::cout << "current_binary_code_num: " << current_binary_code_num << "\n";
+
+                        if (count_for_bits > current_binary_code_num) {
+                            if (bit_type == 1)
+                                binary_code = binary_code | (1 << column_index);
+
+                            // for test
+                            // std::cout << "inter. binary_code: " <<  binary_code  << "\n";
+ 
+                            column_index++;
+                            break;
+                        }
+                        bit_type = bit_type ^ 0x01;
+                    } 
+                }
+                // for test
+                // std::cout << "binary_code: " << long(binary_code) << "\n";
+
+                current_binary_code_num++;
+                binary_codes.push_back(binary_code);
+            }
+            std::pair<std::vector<uint64_t>, std::vector<IdType> > apair(binary_codes, column_dict[bool_key].second);
+            return apair;
+        }
+        else {
+            std::vector<uint64_t> binary_codes(0);
+            std::vector<IdType> id_vector(0);
+            std::pair<std::vector<uint64_t>, std::vector<IdType> > empty_pair(binary_codes, id_vector);
+            return empty_pair;
+        }
+ 
+    }
+
 
 
     std::map<std::vector<uint8_t>, std::pair<std::vector<std::vector<uint8_t> >, std::vector<IdType> > > column_dict;
@@ -476,6 +527,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("merge", &FastCompressDict<uint32_t>::merge)
         .def("go_index", &FastCompressDict<uint32_t>::go_index)
         .def("get_cols", &FastCompressDict<uint32_t>::get_cols)
+        .def("get_binary_codes", &FastCompressDict<uint32_t>::get_binary_codes)
     ;
 
     class_<std::vector<std::vector<uint8_t> > >("ColumnIntVec")
@@ -485,11 +537,21 @@ BOOST_PYTHON_MODULE(fastdict)
     class_<std::vector<uint8_t> >("BitCountVec")
         .def(vector_indexing_suite<std::vector<uint8_t> >())
     ;
-
+ 
+    class_<std::vector<uint64_t> >("BinaryCodesVec")
+        .def(vector_indexing_suite<std::vector<uint64_t> >())
+    ;
+ 
     class_<std::pair<std::vector<std::vector<uint8_t> >, std::vector<uint32_t> > >("ColumnsIdsIntPair")
         .def_readwrite("first", &std::pair<std::vector<std::vector<uint8_t> >, std::vector<uint32_t> >::first)
         .def_readwrite("second", &std::pair<std::vector<std::vector<uint8_t> >, std::vector<uint32_t> >::second)
     ;
+ 
+    class_<std::pair<std::vector<uint64_t>, std::vector<uint32_t> > >("BinaryCodessIdsIntPair")
+        .def_readwrite("first", &std::pair<std::vector<uint64_t>, std::vector<uint32_t> >::first)
+        .def_readwrite("second", &std::pair<std::vector<uint64_t>, std::vector<uint32_t> >::second)
+    ;
+ 
 
     def("save_compress_int", save_compress<uint32_t>);
     def("load_compress_int", load_compress<uint32_t>);

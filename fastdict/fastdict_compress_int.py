@@ -134,5 +134,8 @@ for image_id in cols.second:
     print image_id
 
 
+binary_codes = f_dict.get_binary_codes(123)
+for code in binary_codes.first:
+    print "code: " + str(code)
 
  
