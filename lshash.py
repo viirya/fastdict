@@ -316,6 +316,38 @@ class LSHash(object):
 
         return candidates
 
+
+    def query_in_compressed_domain(self, query_point, num_results=None, distance_func=None):
+
+        if distance_func == "hamming":
+            if not bitarray:
+                raise ImportError(" Bitarray is required for hamming distance")
+
+            if self.loaded_keys == None:
+                self.load_keys()
+
+            if self.num_hashtables == 1:
+                binary_hash = np.array([self._hash(self.uniform_planes[0], query_point)]).astype(np.uint64)
+
+                if 'random' in self.storage_config:
+                    print "fetch cols..."
+                    start = time.clock()
+
+                    (cols, ids) = self.hash_tables[0].get_compressed_cols(binary_hash)
+
+                    elapsed = (time.clock() - start)
+                    print "time: " + str(elapsed)
+
+                    ids = np.array(ids)
+ 
+                    print "cuda processing..."
+                    start = time.clock()
+
+                    hamming_distances = self.cuda_hamming.cuda_hamming_dist_in_compressed_domain(binary_hash, cols, ids.shape[0])
+
+                    elapsed = (time.clock() - start)
+                    print "time: " + str(elapsed)
+
     def query(self, query_point, num_results=None, distance_func=None):
         """ Takes `query_point` which is either a tuple or a list of numbers,
         returns `num_results` of results as a list of tuples that are ranked
@@ -380,25 +412,14 @@ class LSHash(object):
                     elapsed = (time.clock() - start)
                     print "time: " + str(elapsed)
 
-                #candidates = [(ix, int(d_func(binary_hash, ix[0])))
-                #              for ix in candidates]
-
-                #binary_hash = struct.unpack("<Q", binary_hash)[0]
-                #binary_hash = np.array([binary_hash]).astype(np.uint64)
-
                 binary_codes = self.loaded_keys[0]
                 print binary_codes.shape
 
-                #for ix in candidates:
-                    #binary_code = struct.unpack("<Q", ix[0])[0]
-                    #binary_codes.append(binary_code)
-                #binary_codes = np.array(self.loaded_keys[0]).astype(np.uint64)
-
                 print "cuda processing..."
                 start = time.clock()
-                #hamming_distances = self.cuda_hamming.cuda_hamming_dist(binary_hash, binary_codes)
+
                 hamming_distances = self.cuda_hamming.multi_iteration(binary_hash, binary_codes)
-                #hamming_distances = self.cuda_hamming.run_kernel_on_gpus(binary_hash, binary_codes)
+
                 elapsed = (time.clock() - start)
                 print "time: " + str(elapsed)
 

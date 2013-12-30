@@ -93,6 +93,7 @@ def main():
     parser.add_argument('-r', default = '32', help = 'Number of dimensions randomly sampled.')
     parser.add_argument('-c', default = 'n', help = 'Whether to perform compressing step.')
     parser.add_argument('-q', default = 'n', help = 'Whether to sequentially sampling.')
+    parser.add_argument('-p', default = 'n', help = 'Whether to perform querying in compressed domain.')
  
  
 
@@ -124,7 +125,10 @@ def main():
         print "loading compressed index."
         lsh.load_compress_index(args.e)
         print "loading done."
-        retrived = lsh.query(np_feature_vecs[0], num_results = int(args.k), distance_func = 'hamming')
+        if args.p != 'y':
+            retrived = lsh.query(np_feature_vecs[0], num_results = int(args.k), distance_func = 'hamming')
+        else:
+            retrived = lsh.query_in_compressed_domain(np_feature_vecs[0], num_results = int(args.k), distance_func = 'hamming')
         print retrived
 
 if __name__ == "__main__":

@@ -96,9 +96,9 @@ class InMemoryStorage(BaseStorage):
 class RandomInMemoryStorage(InMemoryStorage):
     def __init__(self, config):
         self.name = 'random'
-        self.storage = fastdict.FastCompressIntDict(config['r'])
+        self.storage = fastdict.FastCompressUInt32IntDict(config['r'])
 
-        self.load_dict = fastdict.FastCompressIntDict(config['r'])
+        self.load_dict = fastdict.FastCompressUInt32IntDict(config['r'])
 
         self.init_key_dimension(config['r'], config['dim'], config['random'])
         self.init_bases(config['r'])
@@ -208,21 +208,39 @@ class RandomInMemoryStorage(InMemoryStorage):
         return np.array(vals)
 
     def save(self, filename):
-        fastdict.save_compress_int(filename, self.storage)
+        fastdict.save_compress_uint32_int(filename, self.storage)
 
     def load(self, filename):
         if self.storage.size() > 0:
-            fastdict.load_compress_int(filename, self.load_dict)
+            fastdict.load_compress_uint32_int(filename, self.load_dict)
             self.storage.merge(self.load_dict) 
             self.load_dict.clear()
         else:
-            fastdict.load_compress_int(filename, self.storage)
+            fastdict.load_compress_uint32_int(filename, self.storage)
             key_dimensions = []
             self.storage.get_keydimensions(key_dimensions)
             self.key_dimensions = np.array(key_dimensions)
 
     def compress(self):
         self.storage.go_index()
+
+    def get_compressed_cols(self, reference_key):
+    
+        neighbor_keys = self.neighbor_keys(reference_key)
+        actual_key = self.actual_key(reference_key)
+        all_keys = np.unique(np.append(neighbor_keys, actual_key))
+
+        self.benchmark_begin('load cols')
+
+        columns = []
+        cols = self.storage.get_cols(int(actual_key))
+        for column in cols.first:
+            columns.append(np.array(column).astype(np.uint64))
+        np_columns = np.array(columns)
+
+        self.benchmark_end('load cols')
+
+        return (np_columns, cols.second)
 
     def clear(self):
         self.storage.clear()
