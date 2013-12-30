@@ -197,7 +197,7 @@ bool sort_func(std::pair<uint64_t, IdType> first, std::pair<uint64_t, IdType> se
     return (first.first < second.first);
 }
  
-template <class IdType>
+template <class BitCountType, class IdType>
 class FastCompressDict: public FastDict<IdType> {
 
 public:
@@ -207,7 +207,7 @@ public:
 
     friend class boost::serialization::access;
 
-    void merge(FastCompressDict<IdType>& source) {
+    void merge(FastCompressDict<BitCountType, IdType>& source) {
 
         std::pair<std::vector<uint8_t>, std::vector<std::pair<uint64_t, IdType> > > me;
         BOOST_FOREACH(me, source.dict) {
@@ -297,12 +297,12 @@ public:
             */
 
             //  compress data
-            std::vector<std::vector<uint8_t> > compress_data(64, *new std::vector<uint8_t>());
+            std::vector<std::vector<BitCountType> > compress_data(64, *new std::vector<BitCountType>());
             uint8_t column_index = 0;
             BOOST_FOREACH(std::vector<uint8_t> column, columns) {
                 //  scan each column to compress the data
                 uint8_t prev_repeat_bit = 0;
-                uint8_t repeat_count = 0;
+                BitCountType repeat_count = 0;
                 BOOST_FOREACH(uint8_t bit, column) {
                     if (bit == prev_repeat_bit) {
                         repeat_count++;
@@ -328,7 +328,7 @@ public:
             }
             */
             
-            std::pair<std::vector<std::vector<uint8_t> >, std::vector<IdType> > pair(compress_data, id_vector);
+            std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > pair(compress_data, id_vector);
             column_dict[me.first] = pair;
             //super::set_with_bool_key(me.first, 0x00, *new IdType());
             //super::dict.erase(me.first);
@@ -337,7 +337,7 @@ public:
         super::dict.clear();
     }
 
-    std::pair<std::vector<std::vector<uint8_t> >, std::vector<IdType> > get_cols(uint32_t key) {
+    std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > get_cols(uint32_t key) {
         std::vector<uint8_t> bool_key = super::actual_key(key);
 
         if (column_dict.count(bool_key) > 0)
@@ -345,9 +345,9 @@ public:
         else {
             //std::vector<std::vector<uint8_t> > columns(1, *new std::vector<uint8_t>(1, 0));
             //std::vector<IdType> id_vector(1, *new IdType());
-            std::vector<std::vector<uint8_t> > columns(0);
+            std::vector<std::vector<BitCountType> > columns(0);
             std::vector<IdType> id_vector(0);
-            std::pair<std::vector<std::vector<uint8_t> >, std::vector<IdType> > empty_pair(columns, id_vector);
+            std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > empty_pair(columns, id_vector);
             return empty_pair;
         }
     }
@@ -359,13 +359,13 @@ public:
         if (column_dict.count(bool_key) > 0) {
             uint32_t current_binary_code_num = 0;
             for (int binary_code_count = 0; binary_code_count < column_dict[bool_key].second.size(); binary_code_count++) {
-                std::vector<uint8_t> column; 
+                std::vector<BitCountType> column; 
                 uint64_t binary_code = 0x00;
                 uint16_t column_index = 0;
                 BOOST_FOREACH(column, column_dict[bool_key].first) {
                     uint32_t count_for_bits = 0;
                     uint8_t bit_type = 0x00;
-                    BOOST_FOREACH(uint8_t bit_counts, column) {
+                    BOOST_FOREACH(BitCountType bit_counts, column) {
                         count_for_bits += bit_counts;
 
                         // for test
@@ -405,7 +405,7 @@ public:
 
 
 
-    std::map<std::vector<uint8_t>, std::pair<std::vector<std::vector<uint8_t> >, std::vector<IdType> > > column_dict;
+    std::map<std::vector<uint8_t>, std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > > column_dict;
     
 
 
@@ -432,8 +432,8 @@ void load(char* filename, FastDict<IdType>& dict) {
 
 }
  
-template <class IdType>
-void save_compress(char* filename, FastCompressDict<IdType> dict) {
+template <class BitCountType, class IdType>
+void save_compress(char* filename, FastCompressDict<BitCountType, IdType> dict) {
    std::ofstream ofs(filename);
 
    boost::archive::text_oarchive oa(ofs);
@@ -443,8 +443,8 @@ void save_compress(char* filename, FastCompressDict<IdType> dict) {
    oa << dict.column_dict;
 }
 
-template <class IdType>
-void load_compress(char* filename, FastCompressDict<IdType>& dict) {
+template <class BitCountType, class IdType>
+void load_compress(char* filename, FastCompressDict<BitCountType, IdType>& dict) {
     std::ifstream ifs(filename);
 
     boost::archive::text_iarchive ia(ifs);
@@ -514,27 +514,27 @@ BOOST_PYTHON_MODULE(fastdict)
     def("save_int", save<uint32_t>);
     def("load_int", load<uint32_t>);
 
-    class_<FastCompressDict<uint32_t> >("FastCompressIntDict", init<uint8_t>())
-        .def("get", &FastCompressDict<uint32_t>::get)
-        .def("set", &FastCompressDict<uint32_t>::set)
-        .def("append", &FastCompressDict<uint32_t>::append)
-        .def("size", &FastCompressDict<uint32_t>::size)
-        .def("keys", &FastCompressDict<uint32_t>::keys)
-        .def("set_keydimensions", &FastCompressDict<uint32_t>::set_keydimensions)
-        .def("get_keydimensions", &FastCompressDict<uint32_t>::get_keydimensions)
-        .def("exist", &FastCompressDict<uint32_t>::exist)
-        .def("clear", &FastCompressDict<uint32_t>::clear)
-        .def("merge", &FastCompressDict<uint32_t>::merge)
-        .def("go_index", &FastCompressDict<uint32_t>::go_index)
-        .def("get_cols", &FastCompressDict<uint32_t>::get_cols)
-        .def("get_binary_codes", &FastCompressDict<uint32_t>::get_binary_codes)
+    class_<FastCompressDict<uint8_t, uint32_t> >("FastCompressIntDict", init<uint8_t>())
+        .def("get", &FastCompressDict<uint8_t, uint32_t>::get)
+        .def("set", &FastCompressDict<uint8_t, uint32_t>::set)
+        .def("append", &FastCompressDict<uint8_t, uint32_t>::append)
+        .def("size", &FastCompressDict<uint8_t, uint32_t>::size)
+        .def("keys", &FastCompressDict<uint8_t, uint32_t>::keys)
+        .def("set_keydimensions", &FastCompressDict<uint8_t, uint32_t>::set_keydimensions)
+        .def("get_keydimensions", &FastCompressDict<uint8_t, uint32_t>::get_keydimensions)
+        .def("exist", &FastCompressDict<uint8_t, uint32_t>::exist)
+        .def("clear", &FastCompressDict<uint8_t, uint32_t>::clear)
+        .def("merge", &FastCompressDict<uint8_t, uint32_t>::merge)
+        .def("go_index", &FastCompressDict<uint8_t, uint32_t>::go_index)
+        .def("get_cols", &FastCompressDict<uint8_t, uint32_t>::get_cols)
+        .def("get_binary_codes", &FastCompressDict<uint8_t, uint32_t>::get_binary_codes)
     ;
 
-    class_<std::vector<std::vector<uint8_t> > >("ColumnIntVec")
+    class_<std::vector<std::vector<uint8_t> > >("CompressedUInt8ColumnIntVec")
         .def(vector_indexing_suite<std::vector<std::vector<uint8_t> > >())
     ;
 
-    class_<std::vector<uint8_t> >("BitCountVec")
+    class_<std::vector<uint8_t> >("UInt8BitCountVec")
         .def(vector_indexing_suite<std::vector<uint8_t> >())
     ;
  
@@ -542,7 +542,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def(vector_indexing_suite<std::vector<uint64_t> >())
     ;
  
-    class_<std::pair<std::vector<std::vector<uint8_t> >, std::vector<uint32_t> > >("ColumnsIdsIntPair")
+    class_<std::pair<std::vector<std::vector<uint8_t> >, std::vector<uint32_t> > >("CompressedColumnsIdsIntPair")
         .def_readwrite("first", &std::pair<std::vector<std::vector<uint8_t> >, std::vector<uint32_t> >::first)
         .def_readwrite("second", &std::pair<std::vector<std::vector<uint8_t> >, std::vector<uint32_t> >::second)
     ;
@@ -553,8 +553,42 @@ BOOST_PYTHON_MODULE(fastdict)
     ;
  
 
-    def("save_compress_int", save_compress<uint32_t>);
-    def("load_compress_int", load_compress<uint32_t>);
+    def("save_compress_int", save_compress<uint8_t, uint32_t>);
+    def("load_compress_int", load_compress<uint8_t, uint32_t>);
+ 
+    // CompressDict for storing bit counts in uint32_t type
+
+    class_<FastCompressDict<uint32_t, uint32_t> >("FastCompressUInt32IntDict", init<uint8_t>())
+        .def("get", &FastCompressDict<uint32_t, uint32_t>::get)
+        .def("set", &FastCompressDict<uint32_t, uint32_t>::set)
+        .def("append", &FastCompressDict<uint32_t, uint32_t>::append)
+        .def("size", &FastCompressDict<uint32_t, uint32_t>::size)
+        .def("keys", &FastCompressDict<uint32_t, uint32_t>::keys)
+        .def("set_keydimensions", &FastCompressDict<uint32_t, uint32_t>::set_keydimensions)
+        .def("get_keydimensions", &FastCompressDict<uint32_t, uint32_t>::get_keydimensions)
+        .def("exist", &FastCompressDict<uint32_t, uint32_t>::exist)
+        .def("clear", &FastCompressDict<uint32_t, uint32_t>::clear)
+        .def("merge", &FastCompressDict<uint32_t, uint32_t>::merge)
+        .def("go_index", &FastCompressDict<uint32_t, uint32_t>::go_index)
+        .def("get_cols", &FastCompressDict<uint32_t, uint32_t>::get_cols)
+        .def("get_binary_codes", &FastCompressDict<uint32_t, uint32_t>::get_binary_codes)
+    ;
+
+    class_<std::vector<std::vector<uint32_t> > >("CompressedUInt32ColumnIntVec")
+        .def(vector_indexing_suite<std::vector<std::vector<uint32_t> > >())
+    ;
+
+    class_<std::vector<uint32_t> >("UInt32BitCountVec")
+        .def(vector_indexing_suite<std::vector<uint32_t> >())
+    ;
+ 
+    class_<std::pair<std::vector<std::vector<uint32_t> >, std::vector<uint32_t> > >("CompressedUInt32ColumnsIdsIntPair")
+        .def_readwrite("first", &std::pair<std::vector<std::vector<uint32_t> >, std::vector<uint32_t> >::first)
+        .def_readwrite("second", &std::pair<std::vector<std::vector<uint32_t> >, std::vector<uint32_t> >::second)
+    ;
+ 
+    def("save_compress_uint32_int", save_compress<uint32_t, uint32_t>);
+    def("load_compress_uint32_int", load_compress<uint32_t, uint32_t>);
  
 }
 
