@@ -131,9 +131,9 @@ def main():
             lsh.load_index(args.e)
             print "loading done."
         if args.p != 'y':
-            retrived = lsh.query(np_feature_vecs[0], num_results = int(args.k), distance_func = 'hamming')
+            retrived = lsh.query(np_feature_vecs[1], num_results = int(args.k), distance_func = 'hamming')
         else:
-            retrived = lsh.query_in_compressed_domain(np_feature_vecs[0], num_results = int(args.k), distance_func = 'hamming')
+            retrived = lsh.query_in_compressed_domain(np_feature_vecs[1], num_results = int(args.k), distance_func = 'hamming')
         print retrived
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import fastdict
+import sys
 
 f_dict = fastdict.FastCompressIntDict(32)
 f_dict.set(123, 456, 0)
@@ -133,6 +134,14 @@ for column in cols.first:
 for image_id in cols.second:
     print image_id
 
+print "buffer:"
+cols_buffer = f_dict.get_cols_as_buffer(123)
+print len(cols_buffer)
+print cols_buffer
+index = 0
+for buffers in cols_buffer:
+    print index
+    index += 1
 
 binary_codes = f_dict.get_binary_codes(123)
 for code in binary_codes.first:

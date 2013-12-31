@@ -22,31 +22,6 @@
 #include <boost/numpy.hpp>
 
 
- 
-struct pyobject_to_python
-{
-    static PyObject* convert(PyObject const& obj_instance)
-    { 
-        PyObject* obj = (PyObject*)&obj_instance;
-
-        return boost::python::incref(obj);
-    }
-};
- 
-struct pyobject_vector_to_python
-{
-    static PyObject* convert(std::vector<PyObject*> const& array)
-    { 
-        boost::python::list pylist;
-
-        BOOST_FOREACH(PyObject* obj, array) {
-            pylist.append(*obj);
-        }
-
-        return boost::python::incref(pylist.ptr());
-    }
-};
-
 
 template <class IdType>
 class FastDict
@@ -369,59 +344,6 @@ public:
         super::dict.clear();
     }
 
-
-    // test for buffer
-    /*
-    std::pair<std::vector<PyObject>, std::vector<IdType> >  get_cols_as_buffer(uint32_t key) {
-        std::vector<uint8_t> bool_key = super::actual_key(key);
-
-        std::vector<PyObject> buffers(0);
-
-        if (column_dict.count(bool_key) > 0) {
-
-                std::vector<BitCountType> column;
-                BOOST_FOREACH(column, column_dict[bool_key].first) {               
-                    void* data = (void*)(column.data());
-                    Py_ssize_t size = column.size();
-                    buffers.insert(buffers.end(), *PyBuffer_FromMemory (data, size));
-                }
-        }
-
-        std::pair<std::vector<PyObject>, std::vector<IdType> > apair(buffers, column_dict[bool_key].second);
-
-        return apair;
-    }
-    */
- 
-    std::vector<PyObject*> get_cols_as_buffer(uint32_t key) {
-        std::vector<uint8_t> bool_key = super::actual_key(key);
-
-        std::vector<PyObject*> buffers(0);
-
-        if (column_dict.count(bool_key) > 0) {
-
-                std::vector<BitCountType> column;
-                BOOST_FOREACH(column, column_dict[bool_key].first) {               
-                    void* data = (void*)(column.data());
-                    Py_ssize_t size = column.size();
-                    buffers.insert(buffers.end(), PyBuffer_FromMemory (data, size));
-                }
-        }
-
-        return buffers;
-    }
- 
-    std::vector<IdType> get_image_ids(uint32_t key) {
-        std::vector<uint8_t> bool_key = super::actual_key(key);
-
-        if (column_dict.count(bool_key) > 0)
-            return column_dict[bool_key].second;
-        else {
-            std::vector<IdType> id_vector(0);
-            return id_vector;
-        }
-    }
- 
     std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > get_cols(uint32_t key) {
         std::vector<uint8_t> bool_key = super::actual_key(key);
 
@@ -544,15 +466,6 @@ using namespace boost::python;
 
 BOOST_PYTHON_MODULE(fastdict)
 {
-
-    to_python_converter<
-        PyObject,
-        pyobject_to_python>();
- 
-    to_python_converter<
-        std::vector<PyObject*>,
-        pyobject_vector_to_python>();
-
     class_<FastDict<std::string> >("FastDict", init<uint8_t>())
         .def("get", &FastDict<std::string>::get)
         .def("set", &FastDict<std::string>::set)
@@ -622,8 +535,6 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("go_index", &FastCompressDict<uint8_t, uint32_t>::go_index)
         .def("get_cols", &FastCompressDict<uint8_t, uint32_t>::get_cols)
         .def("get_binary_codes", &FastCompressDict<uint8_t, uint32_t>::get_binary_codes)
-        .def("get_cols_as_buffer", &FastCompressDict<uint8_t, uint32_t>::get_cols_as_buffer)
-        .def("get_image_ids", &FastCompressDict<uint8_t, uint32_t>::get_image_ids)
     ;
 
     class_<std::vector<std::vector<uint8_t> > >("CompressedUInt8ColumnIntVec")
@@ -637,17 +548,6 @@ BOOST_PYTHON_MODULE(fastdict)
     class_<std::vector<uint64_t> >("BinaryCodesVec")
         .def(vector_indexing_suite<std::vector<uint64_t> >())
     ;
-
-    /*
-    class_<std::pair<std::vector<PyObject>, std::vector<uint32_t> > >("CompressedBufferColumnsIdsIntPair")
-        .def_readwrite("first", &std::pair<std::vector<PyObject>, std::vector<uint32_t> >::first)
-        .def_readwrite("second", &std::pair<std::vector<PyObject>, std::vector<uint32_t> >::second)
-    ;
-
-    class_<std::vector<PyObject> >("BufferVec")
-        .def(vector_indexing_suite<std::vector<PyObject> >())
-    ;
-    */
  
     class_<std::pair<std::vector<std::vector<uint8_t> >, std::vector<uint32_t> > >("CompressedColumnsIdsIntPair")
         .def_readwrite("first", &std::pair<std::vector<std::vector<uint8_t> >, std::vector<uint32_t> >::first)
@@ -679,8 +579,6 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("go_index", &FastCompressDict<uint32_t, uint32_t>::go_index)
         .def("get_cols", &FastCompressDict<uint32_t, uint32_t>::get_cols)
         .def("get_binary_codes", &FastCompressDict<uint32_t, uint32_t>::get_binary_codes)
-        .def("get_cols_as_buffer", &FastCompressDict<uint32_t, uint32_t>::get_cols_as_buffer)
-        .def("get_image_ids", &FastCompressDict<uint32_t, uint32_t>::get_image_ids)
     ;
 
     class_<std::vector<std::vector<uint32_t> > >("CompressedUInt32ColumnIntVec")

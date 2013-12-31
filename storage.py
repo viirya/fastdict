@@ -242,25 +242,29 @@ class RandomInMemoryStorage(InMemoryStorage):
         actual_key = self.actual_key(reference_key)
         all_keys = np.unique(np.append(neighbor_keys, actual_key))
 
-        columns = []
-
         self.benchmark_begin('load cols')
-        cols = self.storage.get_cols(int(actual_key))
+        #cols = self.storage.get_cols(int(actual_key))
+        cols = self.storage.get_cols_as_buffer(int(actual_key))
+        image_ids = self.storage.get_image_ids(int(actual_key))
         self.benchmark_end('load cols')
+
+        #columns = [0] * len(cols.first)
         
-        self.benchmark_begin('cols to np array')
+        #self.benchmark_begin('cols to np array')
 
-        for column in cols.first:
-            columns.append(np.array(column).astype(np.uint64))
-        self.benchmark_end('cols to np array')
+        #for column in cols.first:
+        #for index in range(0, len(cols.first)):
+        #    columns[index] = np.array(cols.first[index]).astype(np.uint64)
+
+        #self.benchmark_end('cols to np array')
  
-        self.benchmark_begin('cols to np array')
+        #self.benchmark_begin('cols to np array')
  
-        np_columns = np.array(columns)
+        #np_columns = np.array(columns)
 
-        self.benchmark_end('cols to np array')
+        #self.benchmark_end('cols to np array')
 
-        return (np_columns, cols.second)
+        return (cols, image_ids)
 
     def clear(self):
         self.storage.clear()

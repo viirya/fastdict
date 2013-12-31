@@ -341,17 +341,15 @@ class LSHash(object):
                     print "fetch cols..."
                     start = time.clock()
 
-                    (cols, ids) = self.hash_tables[0].get_compressed_cols(binary_hash)
+                    (cols, image_ids) = self.hash_tables[0].get_compressed_cols(binary_hash)
 
                     elapsed = (time.clock() - start)
                     print "time: " + str(elapsed)
 
-                    ids = np.array(ids)
- 
                     print "cuda processing..."
                     start = time.clock()
 
-                    hamming_distances = self.cuda_hamming.cuda_hamming_dist_in_compressed_domain(binary_hash, cols, ids.shape[0])
+                    hamming_distances = self.cuda_hamming.cuda_hamming_dist_in_compressed_domain(binary_hash, cols, image_ids)
 
                     elapsed = (time.clock() - start)
                     print "time: " + str(elapsed)

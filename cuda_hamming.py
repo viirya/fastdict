@@ -1,12 +1,14 @@
 import pycuda.autoinit
 import pycuda.driver as drv
 import numpy
+import array
+import time
 
 from pycuda.compiler import SourceModule
 
 class CudaHamming(object):
 
-    def __init__(self, block = (500, 1, 1), grid = (500, 200)):
+    def __init__(self,  block = (50, 1, 1), grid = (1, 10)):
 
         vector_len = 100000
 
@@ -60,6 +62,7 @@ __global__ void compressed_hamming_dist(uint64_t* query, uint64_t** bit_counts, 
 
     //distances[i] = binary_code;
     distances[i] = (xor_r * h01) >> 56;
+    //distances[i] = i;
   }
 }
         """)
@@ -101,12 +104,25 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         self.block = block
         self.grid = grid             
 
+    def benchmark_begin(self, title):
+        print "start to " + title
+        self.start = time.clock()
 
-    def cuda_hamming_dist_in_compressed_domain(self, vec_a, compressed_columns, binary_code_length):
+    def benchmark_end(self, title):
+        print "end of " + title
+        elapsed = (time.clock() - self.start)
+        print "time: " + str(elapsed)
+
+    def cuda_hamming_dist_in_compressed_domain(self, vec_a, compressed_columns, image_ids):
+
+        binary_code_length = len(image_ids)
+
+        self.benchmark_begin('preparing')
 
         addresses = [] 
         gpu_alloc_objs = []
         for column in compressed_columns:
+            #column_addr = drv.to_device(buffer(array.array('L', column), 0))
             column_addr = drv.to_device(column)
             gpu_alloc_objs.append(column_addr)
             addresses.append(int(column_addr))
@@ -125,11 +141,17 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
 
         print "total: " + str(binary_code_length) + " compressed binary codes." 
 
+        self.benchmark_end('preparing')
+        self.benchmark_begin('cudaing')
         self.compressed_hamming_dist(
                 drv.In(vec_a), arrays_gpu, drv.In(length), drv.Out(distances),
                 block = self.block, grid = self.grid)
+        self.benchmark_end('cudaing')
 
         print distances
+        #for dis in distances:
+        #    print dis
+        print distances.shape
 
     def multi_iteration(self, vec_a, vec_b):
 
@@ -158,6 +180,9 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
                 block = self.block, grid = self.grid)
         
         print dest
+        #for d in dest:
+        #    print d
+        print dest.shape
         
         return dest
 
