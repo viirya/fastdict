@@ -19,9 +19,7 @@
 
 #include <boost/python.hpp>
 
-#include "boost/numpy.hpp"
-#include "boost/numpy/ndarray.hpp"
-
+#include <boost/numpy.hpp>
 
 
 
@@ -346,33 +344,17 @@ public:
         super::dict.clear();
     }
 
-    std::pair<std::vector<boost::numpy::ndarray>, std::vector<IdType> > get_cols(uint32_t key) {
-        //boost::numpy::initialize();
-        
+    std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > get_cols(uint32_t key) {
         std::vector<uint8_t> bool_key = super::actual_key(key);
 
-        if (column_dict.count(bool_key) > 0) {
-            std::vector<boost::numpy::ndarray> columns;
-            std::vector<BitCountType> column;
-
-            BOOST_FOREACH(column, column_dict[bool_key].first) {
-                Py_intptr_t shape[1] = { column.size() };
-                //boost::numpy::ndarray result = boost::numpy::zeros(1, shape, boost::numpy::dtype::get_builtin<BitCountType>());
-                boost::numpy::ndarray result = boost::numpy::array(boost::python::list(column));
-                //std::copy(column.begin(), column.end(), reinterpret_cast<BitCountType*>(result.get_data()));
-                //std::cout << std::endl << "Python ndarray :" << boost::python::extract<char const *>(boost::python::str(result)) << std::endl;
-
-                columns.insert(columns.end(), result);
-            }
-            std::pair<std::vector<boost::numpy::ndarray>, std::vector<IdType> > return_pair(columns, column_dict[bool_key].second);
-            return return_pair;
-        } else {
+        if (column_dict.count(bool_key) > 0)
+            return column_dict[bool_key];
+        else {
             //std::vector<std::vector<uint8_t> > columns(1, *new std::vector<uint8_t>(1, 0));
             //std::vector<IdType> id_vector(1, *new IdType());
-            Py_intptr_t shape[1] = { 1 };
-            std::vector<boost::numpy::ndarray> columns(1, boost::numpy::zeros(1, shape, boost::numpy::dtype::get_builtin<BitCountType>()));
+            std::vector<std::vector<BitCountType> > columns(0);
             std::vector<IdType> id_vector(0);
-            std::pair<std::vector<boost::numpy::ndarray>, std::vector<IdType> > empty_pair(columns, id_vector);
+            std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > empty_pair(columns, id_vector);
             return empty_pair;
         }
     }
@@ -481,12 +463,9 @@ void load_compress(char* filename, FastCompressDict<BitCountType, IdType>& dict)
 }
  
 using namespace boost::python;
-using namespace boost::numpy;
 
 BOOST_PYTHON_MODULE(fastdict)
 {
-    boost::numpy::initialize();
-
     class_<FastDict<std::string> >("FastDict", init<uint8_t>())
         .def("get", &FastDict<std::string>::get)
         .def("set", &FastDict<std::string>::set)
@@ -570,11 +549,6 @@ BOOST_PYTHON_MODULE(fastdict)
         .def(vector_indexing_suite<std::vector<uint64_t> >())
     ;
  
-    class_<std::pair<std::vector<ndarray>, std::vector<uint32_t> > >("CompressedNumpyColumnsIdsIntPair")
-        .def_readwrite("first", &std::pair<std::vector<ndarray>, std::vector<uint32_t> >::first)
-        .def_readwrite("second", &std::pair<std::vector<ndarray>, std::vector<uint32_t> >::second)
-    ;
- 
     class_<std::pair<std::vector<std::vector<uint8_t> >, std::vector<uint32_t> > >("CompressedColumnsIdsIntPair")
         .def_readwrite("first", &std::pair<std::vector<std::vector<uint8_t> >, std::vector<uint32_t> >::first)
         .def_readwrite("second", &std::pair<std::vector<std::vector<uint8_t> >, std::vector<uint32_t> >::second)
@@ -613,15 +587,6 @@ BOOST_PYTHON_MODULE(fastdict)
 
     class_<std::vector<uint32_t> >("UInt32BitCountVec")
         .def(vector_indexing_suite<std::vector<uint32_t> >())
-    ;
- 
-    class_<std::vector<ndarray> >("NDarrayVec")
-        .def(vector_indexing_suite<std::vector<ndarray> >())
-    ;
-
-    class_<std::pair<std::vector<ndarray>, std::vector<uint32_t> > >("CompressedUInt32NumpyColumnsIdsIntPair")
-        .def_readwrite("first", &std::pair<std::vector<ndarray>, std::vector<uint32_t> >::first)
-        .def_readwrite("second", &std::pair<std::vector<ndarray>, std::vector<uint32_t> >::second)
     ;
  
     class_<std::pair<std::vector<std::vector<uint32_t> >, std::vector<uint32_t> > >("CompressedUInt32ColumnsIdsIntPair")
