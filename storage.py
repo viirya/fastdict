@@ -244,6 +244,18 @@ class RandomInMemoryStorage(InMemoryStorage):
 
         return binary_codes
 
+    def show_uncompressed_keys(self, cols_buffer):
+        index = 0
+        for buffers in cols_buffer:
+            print index
+            for i in range(0, len(buffers) / 8):
+                data = ''
+                for j in range(i * 8, i * 8 + 8):
+                    data = data + buffers[j]
+                print data
+                print struct.unpack('Q', data)
+            index += 1
+
     def get_compressed_cols(self, reference_key):
     
         neighbor_keys = self.neighbor_keys(reference_key)

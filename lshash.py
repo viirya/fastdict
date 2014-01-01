@@ -329,8 +329,6 @@ class LSHash(object):
 
         if distance_func == "hamming":
 
-            self.hash_tables[0].init_runtime()
-
             if not bitarray:
                 raise ImportError(" Bitarray is required for hamming distance")
 
@@ -341,13 +339,14 @@ class LSHash(object):
                 binary_hash = np.array([self._hash(self.uniform_planes[0], query_point)]).astype(np.uint64)
 
                 if 'random' in self.storage_config:
-                    print "fetch cols..."
-                    start = time.clock()
+
+                    #b_codes = self.hash_tables[0].uncompress_binary_codes(binary_hash)
+                    #for code in b_codes.first:
+                    #    print "b code: " + str(code)
+
+                    self.hash_tables[0].init_runtime()
 
                     (cols, image_ids) = self.hash_tables[0].get_compressed_cols(binary_hash)
-
-                    elapsed = (time.clock() - start)
-                    print "time: " + str(elapsed)
 
                     print "cuda processing..."
                     start = time.clock()
