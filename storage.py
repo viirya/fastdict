@@ -105,6 +105,8 @@ class RandomInMemoryStorage(InMemoryStorage):
 
         self.config = config
 
+        self.inited_runtime = False
+
     def init_key_dimension(self, num_of_r, dim, random = True):
         if random:
             self.key_dimensions = np.sort(np.random.choice(dim, num_of_r, replace = False))
@@ -206,6 +208,12 @@ class RandomInMemoryStorage(InMemoryStorage):
             vals.append(self.storage.get(int(neighbor_key)))
 
         return np.array(vals)
+
+    def init_runtime(self):
+        if not self.inited_runtime:
+            print "init rumtine dict..."
+            self.storage.init_runtime_dict()
+            print "done."
 
     def save(self, filename):
         fastdict.save_compress_uint32_int(filename, self.storage)

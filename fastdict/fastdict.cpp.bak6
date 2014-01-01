@@ -418,13 +418,10 @@ public:
     // but using plain array is OK.
     // since dynamically create array at every time python sends query is too slow
     // so we add this method to be called before any querying of compressed dict.
-    void init_runtime_dict() {
+    void initial_dict() {
 
         std::pair<std::vector<uint8_t>, std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > > me;
-
         BOOST_FOREACH(me, column_dict) {
-            std::vector<uint64_t*> columns;
-            std::vector<uint32_t> columns_length;
 
             std::vector<BitCountType> column;
             BOOST_FOREACH(column, me.second.first) {               
@@ -434,15 +431,11 @@ public:
                 BOOST_FOREACH(BitCountType ele, column) {
                     column_as_array[ele_index++] = (uint64_t)ele;
                 }
-                columns.insert(columns.end(), column_as_array);
-                columns_length.insert(columns_length.end(), column.size());
+                runtime_dict.insert(runtime_dict.end(), column_as_array);
             }
-
-            std::pair<std::vector<uint64_t*>, std::vector<IdType> > nested_pair(columns, me.second.second);
-            std::pair<std::vector<uint32_t>, std::pair<std::vector<uint64_t*>, std::vector<IdType> > > pair(columns_length, nested_pair);
-            runtime_dict[me.first] = pair;
+            std::vector<std::vector<BitCountType> empty_vector(0);
+            me.second.first = empty_vector;
         }
-        column_dict.clear();
     }
  
     std::vector<PyObject*> get_cols_as_buffer(uint32_t key) {
@@ -450,22 +443,18 @@ public:
 
         std::vector<PyObject*> buffers(0);
 
-        if (runtime_dict.count(bool_key) > 0) {
+        if (column_dict.count(bool_key) > 0) {
 
-                uint64_t* column;
-                int column_index = 0;
-                BOOST_FOREACH(column, runtime_dict[bool_key].second.first) {               
-
-                    /*
+                std::vector<BitCountType> column;
+                BOOST_FOREACH(column, column_dict[bool_key].first) {               
                     uint64_t* column_as_array =  new uint64_t[column.size()];
 
                     int ele_index = 0;
                     BOOST_FOREACH(BitCountType ele, column) {
                         column_as_array[ele_index++] = (uint64_t)ele;
                     }
-                    */
 
-                    PyObject* buffer_obj = PyBuffer_FromMemory ((void*)column, runtime_dict[bool_key].first[column_index++] * 8);
+                    PyObject* buffer_obj = PyBuffer_FromMemory ((void*)column_as_array, column.size() * 8);
                     boost::python::incref(buffer_obj);
 
                     buffers.insert(buffers.end(), buffer_obj);
@@ -478,16 +467,14 @@ public:
     std::vector<IdType> get_image_ids(uint32_t key) {
         std::vector<uint8_t> bool_key = super::actual_key(key);
 
-        if (runtime_dict.count(bool_key) > 0)
-            return runtime_dict[bool_key].second.second;
+        if (column_dict.count(bool_key) > 0)
+            return column_dict[bool_key].second;
         else {
             std::vector<IdType> id_vector(0);
             return id_vector;
         }
     }
  
-    // get raw compressed data
-    // called before init_runtime_dict() since initialization will clear column_dict
     std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > get_cols(uint32_t key) {
         std::vector<uint8_t> bool_key = super::actual_key(key);
 
@@ -503,7 +490,6 @@ public:
         }
     }
 
-    // cpu-based uncompression algorithm
     std::pair<std::vector<uint64_t>, std::vector<IdType> > get_binary_codes(uint32_t key) {
         std::vector<uint8_t> bool_key = super::actual_key(key);
         std::vector<uint64_t> binary_codes;
@@ -558,7 +544,7 @@ public:
 
 
     std::map<std::vector<uint8_t>, std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > > column_dict;
-    std::map<std::vector<uint8_t>, std::pair<std::vector<uint32_t>, std::pair<std::vector<uint64_t*>, std::vector<IdType> > > > runtime_dict;
+    std::vector<uint64_t*> runtime_dict;
 
 };
 
@@ -690,7 +676,6 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("get_binary_codes", &FastCompressDict<uint8_t, uint32_t>::get_binary_codes)
         .def("get_cols_as_buffer", &FastCompressDict<uint8_t, uint32_t>::get_cols_as_buffer)
         .def("get_image_ids", &FastCompressDict<uint8_t, uint32_t>::get_image_ids)
-        .def("init_runtime_dict", &FastCompressDict<uint8_t, uint32_t>::init_runtime_dict)
     ;
 
     class_<std::vector<std::vector<uint8_t> > >("CompressedUInt8ColumnIntVec")
@@ -748,7 +733,6 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("get_binary_codes", &FastCompressDict<uint32_t, uint32_t>::get_binary_codes)
         .def("get_cols_as_buffer", &FastCompressDict<uint32_t, uint32_t>::get_cols_as_buffer)
         .def("get_image_ids", &FastCompressDict<uint32_t, uint32_t>::get_image_ids)
-        .def("init_runtime_dict", &FastCompressDict<uint32_t, uint32_t>::init_runtime_dict)
     ;
 
     class_<std::vector<std::vector<uint32_t> > >("CompressedUInt32ColumnIntVec")

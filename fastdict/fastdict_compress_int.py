@@ -2,6 +2,7 @@
 
 import fastdict
 import sys
+import struct
 
 f_dict = fastdict.FastCompressIntDict(32)
 f_dict.set(123, 456, 0)
@@ -134,6 +135,16 @@ for column in cols.first:
 for image_id in cols.second:
     print image_id
 
+# get_binary_codes should be called before runtime dict initialization
+binary_codes = f_dict.get_binary_codes(123)
+for code in binary_codes.first:
+    print "code: " + str(code)
+
+# initialze runtime dict
+print "init runtime dict..."
+f_dict.init_runtime_dict()
+print "done."
+
 print "buffer:"
 cols_buffer = f_dict.get_cols_as_buffer(123)
 print len(cols_buffer)
@@ -141,10 +152,12 @@ print cols_buffer
 index = 0
 for buffers in cols_buffer:
     print index
+    for i in range(0, len(buffers) / 8):
+        data = ''
+        for j in range(i * 8, i * 8 + 8):
+            data = data + buffers[j]
+        print data
+        print struct.unpack('Q', data)
     index += 1
-
-binary_codes = f_dict.get_binary_codes(123)
-for code in binary_codes.first:
-    print "code: " + str(code)
 
  

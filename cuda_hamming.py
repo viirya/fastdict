@@ -8,7 +8,7 @@ from pycuda.compiler import SourceModule
 
 class CudaHamming(object):
 
-    def __init__(self,  block = (50, 1, 1), grid = (1, 10)):
+    def __init__(self,  block = (70, 1, 1), grid = (1, 1)):
 
         vector_len = 100000
 
@@ -20,9 +20,17 @@ typedef unsigned long long int uint64_t;
 __global__ void compressed_hamming_dist(uint64_t* query, uint64_t** bit_counts, uint64_t* max_length, uint64_t* distances)
 {
   const uint64_t i = gridDim.x * blockDim.x * blockIdx.y + blockIdx.x * blockDim.x + threadIdx.x;
-  uint64_t xor_r;
 
-  if (i < max_length[0]) {
+  // how many binary codes we uncompress in a cuda thread
+  int batch_size = 100;
+
+  uint64_t binary_codes[100] = {};
+  const uint64_t i_for_batch = i * batch_size;
+
+  if (i_for_batch < max_length[0]) {
+
+    for (int simple_index = 0; (simple_index < batch_size) && (i_for_batch + simple_index < max_length[0]); simple_index++)
+        binary_codes[simple_index] = 0;
 
     uint64_t binary_code = 0x00;
     uint64_t mark_bit = 0x01;
@@ -33,36 +41,45 @@ __global__ void compressed_hamming_dist(uint64_t* query, uint64_t** bit_counts, 
         uint32_t bit_count_index = 0;
         uint8_t bit_type = 0x00;
 
-        while (count_for_bits < max_length[0]) {
+        // the index for currently uncompressing binary code
+        int current_binary_index = 0;
+
+        while ((count_for_bits < max_length[0]) && (i_for_batch + current_binary_index < max_length[0]) && (current_binary_index < batch_size)) {
             count_for_bits += bit_counts[column_index][bit_count_index++];
-            if (count_for_bits > i) {
-                if (bit_type == 1)
-                    binary_code = binary_code | (mark_bit << column_index);
-                break;
+            if (count_for_bits > (i_for_batch + current_binary_index)) {
+                if (bit_type == 1) {
+                    binary_codes[current_binary_index] = binary_codes[current_binary_index] | (mark_bit << column_index);
+                }
+                // move to next binary code
+                current_binary_index++;
             }
             bit_type = bit_type ^ 0x01;
         }
     } 
 
+    for (int binary_code_index = 0; (binary_code_index < batch_size) && (i_for_batch + binary_code_index < max_length[0]); binary_code_index++) {
 
-    xor_r = query[0] ^ binary_code;
+        if (binary_codes[binary_code_index] > 0x00) {
 
-    const uint64_t m1  = 0x5555555555555555; 
-    const uint64_t m2  = 0x3333333333333333; 
-    const uint64_t m4  = 0x0f0f0f0f0f0f0f0f; 
-    const uint64_t m8  = 0x00ff00ff00ff00ff; 
-    const uint64_t m16 = 0x0000ffff0000ffff; 
-    const uint64_t m32 = 0x00000000ffffffff; 
-    const uint64_t hff = 0xffffffffffffffff; 
-    const uint64_t h01 = 0x0101010101010101; 
-   
-    xor_r -= (xor_r >> 1) & m1;    
-    xor_r = (xor_r & m2) + ((xor_r >> 2) & m2); 
-    xor_r = (xor_r + (xor_r >> 4)) & m4;        
-
-    //distances[i] = binary_code;
-    distances[i] = (xor_r * h01) >> 56;
-    //distances[i] = i;
+            uint64_t xor_r = query[0] ^ binary_codes[binary_code_index];
+            
+            const uint64_t m1  = 0x5555555555555555; 
+            const uint64_t m2  = 0x3333333333333333; 
+            const uint64_t m4  = 0x0f0f0f0f0f0f0f0f; 
+            const uint64_t m8  = 0x00ff00ff00ff00ff; 
+            const uint64_t m16 = 0x0000ffff0000ffff; 
+            const uint64_t m32 = 0x00000000ffffffff; 
+            const uint64_t hff = 0xffffffffffffffff; 
+            const uint64_t h01 = 0x0101010101010101; 
+            
+            xor_r -= (xor_r >> 1) & m1;    
+            xor_r = (xor_r & m2) + ((xor_r >> 2) & m2); 
+            xor_r = (xor_r + (xor_r >> 4)) & m4;        
+            
+            distances[i_for_batch + binary_code_index] = (xor_r * h01) >> 56;
+            //distances[i_for_batch + binary_code_index] = i_for_batch + binary_code_index + 1;
+        }
+    }
   }
 }
         """)
@@ -149,8 +166,10 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         self.benchmark_end('cudaing')
 
         print distances
+        count = 0
         #for dis in distances:
-        #    print dis
+        #    print "count: " + str(count) + " " + str(dis)
+        #    count += 1
         print distances.shape
 
     def multi_iteration(self, vec_a, vec_b):

@@ -328,6 +328,9 @@ class LSHash(object):
     def query_in_compressed_domain(self, query_point, num_results=None, distance_func=None):
 
         if distance_func == "hamming":
+
+            self.hash_tables[0].init_runtime()
+
             if not bitarray:
                 raise ImportError(" Bitarray is required for hamming distance")
 
