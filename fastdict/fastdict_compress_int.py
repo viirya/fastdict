@@ -4,8 +4,8 @@ import fastdict
 import sys
 import struct
 
-f_dict = fastdict.FastCompressIntDict(32)
-f_dict.set(123, 456, 0)
+f_dict = fastdict.FastCompressIntDict(8)
+f_dict.set(123, 6794572984750169060, 0)
 print f_dict.size()
 
 print f_dict.get(123)
@@ -40,7 +40,7 @@ f_dict.set_keydimensions([1, 2, 3])
 
 fastdict.save_compress_int("test.dict", f_dict)
 
-f_dict = fastdict.FastCompressIntDict(32)
+f_dict = fastdict.FastCompressIntDict(8)
 
 print f_dict.size()
 
@@ -48,7 +48,7 @@ fastdict.load_compress_int("test.dict", f_dict)
 
 print f_dict.size()
  
-f_dict_merge_source = fastdict.FastCompressIntDict(32)
+f_dict_merge_source = fastdict.FastCompressIntDict(8)
 
 f_dict_merge_source.set(789, 123, 3)
 
@@ -108,7 +108,7 @@ print f_dict.size()
  
 fastdict.save_compress_int("test.dict", f_dict)
 
-f_dict = fastdict.FastCompressIntDict(32)
+f_dict = fastdict.FastCompressIntDict(8)
 print f_dict.size()
 
 cols = f_dict.get_cols(123)

@@ -320,7 +320,7 @@ public:
                 uint64_t binary_code = element.first;
  
                 // test
-                // std::cout << "code: " << int(binary_code) << ' ' << int(element.second) << "\n";
+                // std::cout << "code: " << uint64_t(binary_code) << ' ' << int(element.second) << "\n";
  
 
                 for (uint8_t i = 0; i < 64; i++) {
@@ -526,9 +526,10 @@ public:
 
                         if (count_for_bits > current_binary_code_num) {
                             if (bit_type == 1)
-                                binary_code = binary_code | (1 << column_index);
+                                binary_code = binary_code | ((uint64_t)1 << column_index);
 
                             // for test
+                            // std::cout << "column_index: " << column_index << "\n";
                             // std::cout << "inter. binary_code: " <<  binary_code  << "\n";
  
                             column_index++;
