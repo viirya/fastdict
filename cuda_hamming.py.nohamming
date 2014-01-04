@@ -8,7 +8,7 @@ from pycuda.compiler import SourceModule
 
 class CudaHamming(object):
 
-    def __init__(self,  block = (64 * 2, 1, 1), grid = (100, 100)):
+    def __init__(self,  block = (256, 1, 1), grid = (10, 1)):
 
         vector_len = 100000
 
@@ -18,36 +18,54 @@ typedef unsigned long int uint32_t;
 typedef unsigned long long int uint64_t;
 __global__ void compressed_hamming_dist(uint64_t* query, uint64_t** bit_counts, uint64_t* max_length, uint64_t* distances)
 {
-    const uint64_t i = gridDim.x * blockDim.x * blockIdx.y + blockIdx.x * blockDim.x + threadIdx.x;
+  const uint64_t i = gridDim.x * blockDim.x * blockIdx.y + blockIdx.x * blockDim.x + threadIdx.x;
+
+  // how many binary codes we uncompress in a cuda thread
+  int batch_size = 1;
+
+  const uint64_t i_for_batch = i * batch_size;
+
+  if (i_for_batch < max_length[0]) {
+
+    for (uint64_t distance_idx = 0; distance_idx < batch_size; distance_idx++) {
+        distances[i_for_batch + distance_idx] = 0;
+    }
+
+    uint64_t base = 1;
     
-    const uint64_t binary_code_id = i / 64;
-    
-    if (binary_code_id < max_length[0]) {
-        //distances[binary_code_id] = 1;
-        uint64_t column_index = i % 64;
-        
+    for (uint64_t column_index = 0; column_index < 64; column_index++) {
+
         uint64_t count_for_bits = 0;
         uint64_t bit_count_index = 0;
         uint8_t bit_type = 0x00;
-        
-        uint64_t query_bit = query[0] & ((uint64_t)1 << column_index);
-        
+
+        uint64_t query_bit = query[0] & base; //((uint64_t)1 << column_index); //base;
+
+        // the index for currently uncompressing binary code
+        uint64_t current_binary_index = 0;
+
         while (count_for_bits <= max_length[0]) {
             count_for_bits += bit_counts[column_index][bit_count_index++];
-        
-            if (count_for_bits > binary_code_id) {
+
+            if ((count_for_bits > max_length[0]) || (current_binary_index > batch_size))
+                break;
+
+            while ((count_for_bits > (i_for_batch + current_binary_index)) && (current_binary_index < batch_size) && (i_for_batch + current_binary_index < max_length[0])) {
                 if (bit_type == 1) {
                     if (query_bit == 0)
-                        distances[binary_code_id]++;
+                        distances[i_for_batch + current_binary_index]++;
                 } else {
                     if (query_bit > 0)
-                        distances[binary_code_id]++;
+                        distances[i_for_batch + current_binary_index]++;
                 }
-                break;
+                // move to next binary code
+                current_binary_index++;
             } 
             bit_type = bit_type ^ 0x01;
         } 
-    }
+        base = base << 1;
+    } 
+  }
 }
         """)
         
@@ -130,7 +148,7 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         self.benchmark_end('preparing')
         self.benchmark_begin('cudaing')
         self.compressed_hamming_dist(
-                drv.In(vec_a), arrays_gpu, drv.In(length), drv.InOut(distances),
+                drv.In(vec_a), arrays_gpu, drv.In(length), drv.Out(distances),
                 block = self.block, grid = self.grid)
         self.benchmark_end('cudaing')
 
