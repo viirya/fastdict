@@ -8,7 +8,7 @@ from pycuda.compiler import SourceModule
 
 class CudaHamming(object):
 
-    def __init__(self,  block = (64 * 2, 1, 1), grid = (100, 100)):
+    def __init__(self,  block = (64, 1, 1), grid = (100, 1)):
 
         vector_len = 100000
 
@@ -20,12 +20,13 @@ __global__ void compressed_hamming_dist(uint64_t* query, uint64_t** bit_counts, 
 {
     const uint64_t i = gridDim.x * blockDim.x * blockIdx.y + blockIdx.x * blockDim.x + threadIdx.x;
     
-    const uint64_t binary_code_id = i / 64;
+    const uint64_t binary_code_id = i / (uint64_t)64;
+
+    __shared__ float share_distances[64];
     
     if (binary_code_id < max_length[0]) {
-        //distances[binary_code_id] = 1;
-        uint64_t column_index = i % 64;
-        
+
+        uint8_t column_index = i % 64;
         uint64_t count_for_bits = 0;
         uint64_t bit_count_index = 0;
         uint8_t bit_type = 0x00;
@@ -38,15 +39,26 @@ __global__ void compressed_hamming_dist(uint64_t* query, uint64_t** bit_counts, 
             if (count_for_bits > binary_code_id) {
                 if (bit_type == 1) {
                     if (query_bit == 0)
-                        distances[binary_code_id]++;
+                        share_distances[column_index]++;
                 } else {
                     if (query_bit > 0)
-                        distances[binary_code_id]++;
+                        share_distances[column_index]++;
                 }
                 break;
             } 
             bit_type = bit_type ^ 0x01;
         } 
+
+        __syncthreads();
+
+        for (int sum_index = 64 / 2; sum_index != 0; sum_index /= 2)
+            if (column_index < sum_index)
+                share_distances[column_index] += share_distances[column_index + sum_index];
+            __syncthreads();
+        if (column_index == 0)
+            distances[binary_code_id] = share_distances[0];
+ 
+
     }
 }
         """)
