@@ -94,7 +94,7 @@ def main():
     parser.add_argument('-c', default = 'n', help = 'Whether to perform compressing step.')
     parser.add_argument('-q', default = 'n', help = 'Whether to sequentially sampling.')
     parser.add_argument('-p', default = 'n', help = 'Whether to perform querying in compressed domain.')
- 
+    parser.add_argument('-g', default = 'y', help = 'GPU mode. default is "yes".')
  
 
     args = parser.parse_args()
@@ -133,7 +133,7 @@ def main():
         if args.p != 'y':
             retrived = lsh.query(np_feature_vecs[1], num_results = int(args.k), distance_func = 'hamming')
         else:
-            retrived = lsh.query_in_compressed_domain(np_feature_vecs[1], num_results = int(args.k), distance_func = 'hamming')
+            retrived = lsh.query_in_compressed_domain(np_feature_vecs[1], num_results = int(args.k), distance_func = 'hamming', gpu_mode = args.g)
         print retrived
 
 if __name__ == "__main__":

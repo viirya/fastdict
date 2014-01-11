@@ -304,12 +304,6 @@ class LSHash(object):
         self.loaded_keys = []
         for i, table in enumerate(self.hash_tables):
             keys = table.keys(key)
-            #keys = table.uncompress_binary_codes(key)
-            #binary_codes = []
-            #for binary_code in keys.first:
-            #    print binary_code
-            #    binary_codes.append(binary_code)
-            #print binary_codes
             self.loaded_keys.append(np.array(keys).astype(np.uint64))
 
     def fetch_extra_data(self, hamming_candidates):
@@ -325,36 +319,48 @@ class LSHash(object):
         return candidates
 
 
-    def query_in_compressed_domain(self, query_point, num_results=None, distance_func=None):
+    def query_in_compressed_domain(self, query_point, num_results=None, distance_func=None, gpu_mode = 'y'):
 
         if distance_func == "hamming":
 
             if not bitarray:
                 raise ImportError(" Bitarray is required for hamming distance")
 
-            if self.loaded_keys == None:
-                self.load_keys()
-
             if self.num_hashtables == 1:
                 binary_hash = np.array([self._hash(self.uniform_planes[0], query_point)]).astype(np.uint64)
 
                 if 'random' in self.storage_config:
 
-                    #b_codes = self.hash_tables[0].uncompress_binary_codes(binary_hash)
-                    #for code in b_codes.first:
-                    #    print "b code: " + str(code)
+                    if gpu_mode == 'n':
+                        print "cpu-based uncompressing..."
+                        start = time.clock()
 
-                    self.hash_tables[0].init_runtime()
+                        b_codes = self.hash_tables[0].uncompress_binary_codes(binary_hash)
 
-                    (cols, image_ids) = self.hash_tables[0].get_compressed_cols(binary_hash)
+                        binary_codes = []
+                        for binary_code in b_codes.first:
+                            #print long(binary_code)
+                            binary_codes.append(str(binary_code))
 
-                    print "cuda processing..."
-                    start = time.clock()
+                        elapsed = (time.clock() - start)
+                        print "time: " + str(elapsed)
 
-                    hamming_distances = self.cuda_hamming.cuda_hamming_dist_in_compressed_domain(binary_hash, cols, image_ids)
+                        self.query_with_binary_codes(binary_hash, np.array(binary_codes).astype(np.uint64), num_results)
 
-                    elapsed = (time.clock() - start)
-                    print "time: " + str(elapsed)
+                    else:
+
+                        self.hash_tables[0].init_runtime()
+                        
+                        (cols, image_ids) = self.hash_tables[0].get_compressed_cols(binary_hash)
+                        
+                        print "cuda processing..."
+                        start = time.clock()
+                        
+                        hamming_distances = self.cuda_hamming.cuda_hamming_dist_in_compressed_domain(binary_hash, cols, image_ids)
+                        
+                        elapsed = (time.clock() - start)
+                        print "time: " + str(elapsed)
+
 
     def query(self, query_point, num_results=None, distance_func=None):
         """ Takes `query_point` which is either a tuple or a list of numbers,
@@ -376,38 +382,9 @@ class LSHash(object):
             will used.
         """
 
-        candidates = set()
-        if not distance_func:
-            distance_func = "euclidean"
-
         if distance_func == "hamming":
             if not bitarray:
                 raise ImportError(" Bitarray is required for hamming distance")
-
-
-            if self.num_hashtables == 1:
-                candidates = []
-
-            if self.loaded_keys == None:
-                self.load_keys()
-
-            for i, table in enumerate(self.hash_tables):
-                binary_hash = self._hash(self.uniform_planes[i], query_point)
-                keys = []
-                if self.loaded_keys != None and i < len(self.loaded_keys):
-                    keys = self.loaded_keys[i]
-                else:
-                    if not 'random' in self.storage_config:
-                        keys = table.keys()
-                #for key in table.keys():
-                for key in keys:
-                    if self.num_hashtables == 1:
-                        1
-                        #candidates.append([key, table.get_list(key)])
-                    else:
-                        distance = LSHash.hamming_dist(key, binary_hash)
-                        if distance < 2:
-                            candidates.update(table.get_list(key))
 
             if self.num_hashtables == 1:
                 d_func = LSHash.hamming_dist
@@ -423,53 +400,43 @@ class LSHash(object):
                 binary_codes = self.loaded_keys[0]
                 print binary_codes.shape
 
-                print "cuda processing..."
-                start = time.clock()
-
-                hamming_distances = self.cuda_hamming.multi_iteration(binary_hash, binary_codes)
-
-                elapsed = (time.clock() - start)
-                print "time: " + str(elapsed)
+                hamming_distances = self.query_with_binary_codes(binary_hash, binary_codes, num_results)
 
                 hamming_candidates = []
                 idx = 0
                 for dist in hamming_distances:
                     hamming_candidates.append((self.loaded_keys[0][idx], dist))
                     idx += 1
-
+                
                 hamming_candidates.sort(key=lambda x: x[1])
-
+                
                 hamming_candidates = hamming_candidates[:num_results] if num_results else hamming_candidates
                 return self.fetch_extra_data(hamming_candidates)
+                
 
-            else:    
-                d_func = LSHash.euclidean_dist_square
+    def query_with_binary_codes(self, binary_hash, binary_codes, num_results):
 
-        else:
+        print "cuda processing..."
+        start = time.clock()
+        
+        hamming_distances = self.cuda_hamming.multi_iteration(binary_hash, binary_codes)
+        
+        elapsed = (time.clock() - start)
+        print "time: " + str(elapsed)
 
-            if distance_func == "euclidean":
-                d_func = LSHash.euclidean_dist_square
-            elif distance_func == "true_euclidean":
-                d_func = LSHash.euclidean_dist
-            elif distance_func == "centred_euclidean":
-                d_func = LSHash.euclidean_dist_centred
-            elif distance_func == "cosine":
-                d_func = LSHash.cosine_dist
-            elif distance_func == "l1norm":
-                d_func = LSHash.l1norm_dist
-            else:
-                raise ValueError("The distance function name is invalid.")
+        return hamming_distances
+        
+        #hamming_candidates = []
+        #idx = 0
+        #for dist in hamming_distances:
+        #    hamming_candidates.append((self.loaded_keys[0][idx], dist))
+        #    idx += 1
+        #
+        #hamming_candidates.sort(key=lambda x: x[1])
+        #
+        #hamming_candidates = hamming_candidates[:num_results] if num_results else hamming_candidates
+        #return self.fetch_extra_data(hamming_candidates)
 
-            for i, table in enumerate(self.hash_tables):
-                binary_hash = self._hash(self.uniform_planes[i], query_point)
-                candidates.update(table.get_list(binary_hash))
-
-        # rank candidates by distance function
-        candidates = [(ix, d_func(query_point, self._as_np_array(ix)))
-                      for ix in candidates]
-        candidates.sort(key=lambda x: x[1])
-
-        return candidates[:num_results] if num_results else candidates
 
     ### distance functions
 
