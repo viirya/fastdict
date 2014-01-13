@@ -20,6 +20,14 @@
 #include <boost/python.hpp>
 
 #include <boost/numpy.hpp>
+
+
+// base64 encoding table
+static const std::string base64_chars = 
+             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+             "abcdefghijklmnopqrstuvwxyz"
+             "0123456789+/";
+
  
 void print_content_py_buffer(PyObject* obj) {
 
@@ -387,9 +395,36 @@ public:
 
         }
         super::dict.clear();
+
+        dict_status = 0;
     }
 
+    // convert column_dict to VLQ base64 format
+    void to_VLQ_base64_dict() {
 
+        std::pair<std::vector<uint8_t>, std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > > me;
+
+        BOOST_FOREACH(me, column_dict) {
+            std::vector<std::string> columns;
+
+            std::vector<BitCountType> column;
+            BOOST_FOREACH(column, me.second.first) {               
+                std::string column_as_VLQ_base64 = "";
+
+                BOOST_FOREACH(BitCountType ele, column) {
+                    column_as_VLQ_base64 += base64VLQ_encode(ele);
+                }
+                columns.insert(columns.end(), column_as_VLQ_base64);
+            }
+
+            std::pair<std::vector<std::string>, std::vector<IdType> > columns_pair(columns, me.second.second);
+            column_vlq_dict[me.first] = columns_pair;
+        }
+        column_dict.clear();
+
+        dict_status = 1;
+    }
+ 
     // test for buffer
     /*
     std::pair<std::vector<PyObject>, std::vector<IdType> >  get_cols_as_buffer(uint32_t key) {
@@ -443,6 +478,36 @@ public:
             runtime_dict[me.first] = pair;
         }
         column_dict.clear();
+
+        dict_status = 2;
+    }
+ 
+    // initiate runtime dict for VLQ base64 column dict
+    void init_runtime_VLQ_base64_dict() {
+
+        std::pair<std::vector<uint8_t>, std::pair<std::vector<std::string>, std::vector<IdType> > > me;
+
+        BOOST_FOREACH(me, column_vlq_dict) {
+            std::vector<char*> columns;
+            std::vector<uint32_t> columns_length;
+
+            BOOST_FOREACH(std::string column, me.second.first) {               
+                char* column_as_array = new char[column.size()];
+
+                for (int str_index = 0; str_index < column.length(); str_index++)
+                    column_as_array[str_index] = (char)column[str_index];
+
+                columns.insert(columns.end(), column_as_array);
+                columns_length.insert(columns_length.end(), column.size());
+            }
+
+            std::pair<std::vector<char*>, std::vector<IdType> > nested_pair(columns, me.second.second);
+            std::pair<std::vector<uint32_t>, std::pair<std::vector<char*>, std::vector<IdType> > > pair(columns_length, nested_pair);
+            runtime_vlq_dict[me.first] = pair;
+        }
+        column_vlq_dict.clear();
+
+        dict_status = 3;
     }
  
     std::vector<PyObject*> get_cols_as_buffer(uint32_t key) {
@@ -475,11 +540,45 @@ public:
         return buffers;
     }
  
+    // for VLQ base64 runtime dict
+    std::vector<PyObject*> get_VLQ_base64_cols_as_buffer(uint32_t key) {
+        std::vector<uint8_t> bool_key = super::actual_key(key);
+
+        std::vector<PyObject*> buffers(0);
+
+        if (runtime_vlq_dict.count(bool_key) > 0) {
+
+                char* column;
+                int column_index = 0;
+                BOOST_FOREACH(column, runtime_vlq_dict[bool_key].second.first) {               
+
+                    PyObject* buffer_obj = PyBuffer_FromMemory ((void*)column, runtime_vlq_dict[bool_key].first[column_index++]);
+                    boost::python::incref(buffer_obj);
+
+                    buffers.insert(buffers.end(), buffer_obj);
+                }
+        }
+
+        return buffers;
+    }
+ 
     std::vector<IdType> get_image_ids(uint32_t key) {
         std::vector<uint8_t> bool_key = super::actual_key(key);
 
         if (runtime_dict.count(bool_key) > 0)
             return runtime_dict[bool_key].second.second;
+        else {
+            std::vector<IdType> id_vector(0);
+            return id_vector;
+        }
+    }
+ 
+    // for VLQ base64 runtime dict
+    std::vector<IdType> get_VLQ_base64_image_ids(uint32_t key) {
+        std::vector<uint8_t> bool_key = super::actual_key(key);
+
+        if (runtime_vlq_dict.count(bool_key) > 0)
+            return runtime_vlq_dict[bool_key].second.second;
         else {
             std::vector<IdType> id_vector(0);
             return id_vector;
@@ -503,6 +602,22 @@ public:
         }
     }
 
+    // for VLQ base64     
+    std::pair<std::vector<std::string>, std::vector<IdType> > get_VLQ_base64_cols(uint32_t key) {
+        std::vector<uint8_t> bool_key = super::actual_key(key);
+
+        if (column_vlq_dict.count(bool_key) > 0)
+            return column_vlq_dict[bool_key];
+        else {
+            //std::vector<std::vector<uint8_t> > columns(1, *new std::vector<uint8_t>(1, 0));
+            //std::vector<IdType> id_vector(1, *new IdType());
+            std::vector<std::string> columns(0);
+            std::vector<IdType> id_vector(0);
+            std::pair<std::vector<std::string>, std::vector<IdType> > empty_pair(columns, id_vector);
+            return empty_pair;
+        }
+    }
+ 
     // cpu-based uncompression algorithm
     std::pair<std::vector<uint64_t>, std::vector<IdType> > get_binary_codes(uint32_t key) {
         std::vector<uint8_t> bool_key = super::actual_key(key);
@@ -556,21 +671,82 @@ public:
  
     }
 
+    uint8_t VLQ_BASE_SHIFT = 5;
+    uint8_t VLQ_BASE = 1 << VLQ_BASE_SHIFT;
+    uint8_t VLQ_BASE_MASK = VLQ_BASE - 1;
+    uint8_t VLQ_CONTINUATION_BIT = VLQ_BASE;
 
+    // encoding/decoding VLQ base64
+    std::string base64VLQ_encode(BitCountType val) {
+        std::string encoded = "";
+        BitCountType digit;
+
+        do {
+            digit = val & VLQ_BASE_MASK;
+            val >>= VLQ_BASE_SHIFT;
+            if (val > 0) {
+                digit |= VLQ_CONTINUATION_BIT;
+            }
+            encoded += base64_chars[digit];
+        } while (val > 0);
+
+        return encoded;
+    }
+
+
+    std::vector<BitCountType> base64VLQ_decode(std::string str) {
+        uint32_t i = 0;
+        uint32_t strLen = str.length();
+        std::vector<BitCountType> results(0);
+
+        while (i < strLen) {
+            BitCountType result = 0;
+            uint8_t shift = 0;
+            uint8_t continuation, digit;
+            do {
+                if (i >= strLen) {
+                    throw new std::string("Expected more digits in base 64 VLQ value.");
+                }
+                digit = base64_chars.find(str[i++]);
+                continuation = digit & VLQ_CONTINUATION_BIT;    
+                digit &= VLQ_BASE_MASK;
+                result = result + (digit << shift);
+                shift += VLQ_BASE_SHIFT;
+            } while (continuation > 0);
+            results.insert(results.end(), result);
+        }
+
+        return results;
+    }
+
+    int get_dict_status() { return dict_status; }    
+
+    // status code for dict
+    // -1: not initialized
+    // 0: compressed dict
+    // 1: VLQ base64 dict
+    // 2: runtime dict
+    // 3: VLQ base64 runtime dict
+    int dict_status = -1;
 
     std::map<std::vector<uint8_t>, std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > > column_dict;
+
+    std::map<std::vector<uint8_t>, std::pair<std::vector<std::string>, std::vector<IdType> > > column_vlq_dict;
+ 
     std::map<std::vector<uint8_t>, std::pair<std::vector<uint32_t>, std::pair<std::vector<uint64_t*>, std::vector<IdType> > > > runtime_dict;
 
+    std::map<std::vector<uint8_t>, std::pair<std::vector<uint32_t>, std::pair<std::vector<char*>, std::vector<IdType> > > > runtime_vlq_dict;
+ 
 };
 
 template <class IdType>
 void save(char* filename, FastDict<IdType> dict) {
-   std::ofstream ofs(filename);
+    std::ofstream ofs(filename);
 
-   boost::archive::text_oarchive oa(ofs);
-   oa << dict.dict;
-   oa << dict.key_dimensions;
-   oa << dict.index_key_dimension;
+    boost::archive::text_oarchive oa(ofs);
+    oa << dict.dict;
+    oa << dict.key_dimensions;
+    oa << dict.index_key_dimension;
 }
 
 template <class IdType>
@@ -586,13 +762,15 @@ void load(char* filename, FastDict<IdType>& dict) {
  
 template <class BitCountType, class IdType>
 void save_compress(char* filename, FastCompressDict<BitCountType, IdType> dict) {
-   std::ofstream ofs(filename);
+    std::ofstream ofs(filename);
 
-   boost::archive::text_oarchive oa(ofs);
-   oa << dict.dict;
-   oa << dict.key_dimensions;
-   oa << dict.index_key_dimension;
-   oa << dict.column_dict;
+    boost::archive::text_oarchive oa(ofs);
+    oa << dict.dict;
+    oa << dict.key_dimensions;
+    oa << dict.index_key_dimension;
+    oa << dict.column_dict;
+    oa << dict.column_vlq_dict;
+    oa << dict.dict_status;
 }
 
 template <class BitCountType, class IdType>
@@ -604,7 +782,8 @@ void load_compress(char* filename, FastCompressDict<BitCountType, IdType>& dict)
     ia >> dict.key_dimensions;
     ia >> dict.index_key_dimension;
     ia >> dict.column_dict;
-
+    ia >> dict.column_vlq_dict;
+    ia >> dict.dict_status;
 }
  
 using namespace boost::python;
@@ -692,6 +871,16 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("get_cols_as_buffer", &FastCompressDict<uint8_t, uint32_t>::get_cols_as_buffer)
         .def("get_image_ids", &FastCompressDict<uint8_t, uint32_t>::get_image_ids)
         .def("init_runtime_dict", &FastCompressDict<uint8_t, uint32_t>::init_runtime_dict)
+        .def("base64VLQ_encode", &FastCompressDict<uint8_t, uint32_t>::base64VLQ_encode)
+        .def("base64VLQ_decode", &FastCompressDict<uint8_t, uint32_t>::base64VLQ_decode)
+        .def("to_VLQ_base64_dict", &FastCompressDict<uint8_t, uint32_t>::to_VLQ_base64_dict)
+        .def("init_runtime_VLQ_base64_dict", &FastCompressDict<uint8_t, uint32_t>::init_runtime_VLQ_base64_dict) 
+        .def("get_VLQ_base64_cols_as_buffer", &FastCompressDict<uint8_t, uint32_t>::get_VLQ_base64_cols_as_buffer
+)
+        .def("get_VLQ_base64_image_ids", &FastCompressDict<uint8_t, uint32_t>::get_VLQ_base64_image_ids)
+        .def("get_VLQ_base64_cols", &FastCompressDict<uint8_t, uint32_t>::get_VLQ_base64_cols)
+        .def("get_dict_status", &FastCompressDict<uint8_t, uint32_t>::get_dict_status)
+
     ;
 
     class_<std::vector<std::vector<uint8_t> > >("CompressedUInt8ColumnIntVec")
@@ -750,6 +939,14 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("get_cols_as_buffer", &FastCompressDict<uint32_t, uint32_t>::get_cols_as_buffer)
         .def("get_image_ids", &FastCompressDict<uint32_t, uint32_t>::get_image_ids)
         .def("init_runtime_dict", &FastCompressDict<uint32_t, uint32_t>::init_runtime_dict)
+        .def("base64VLQ_encode", &FastCompressDict<uint32_t, uint32_t>::base64VLQ_encode)
+        .def("base64VLQ_decode", &FastCompressDict<uint32_t, uint32_t>::base64VLQ_decode)
+        .def("to_VLQ_base64_dict", &FastCompressDict<uint32_t, uint32_t>::to_VLQ_base64_dict)
+        .def("init_runtime_VLQ_base64_dict", &FastCompressDict<uint32_t, uint32_t>::init_runtime_VLQ_base64_dict)
+        .def("get_VLQ_base64_cols_as_buffer", &FastCompressDict<uint32_t, uint32_t>::get_VLQ_base64_cols_as_buffer)
+        .def("get_VLQ_base64_image_ids", &FastCompressDict<uint32_t, uint32_t>::get_VLQ_base64_image_ids)
+        .def("get_VLQ_base64_cols", &FastCompressDict<uint32_t, uint32_t>::get_VLQ_base64_cols)
+        .def("get_dict_status", &FastCompressDict<uint32_t, uint32_t>::get_dict_status)
     ;
 
     class_<std::vector<std::vector<uint32_t> > >("CompressedUInt32ColumnIntVec")
@@ -760,10 +957,19 @@ BOOST_PYTHON_MODULE(fastdict)
         .def(vector_indexing_suite<std::vector<uint32_t> >())
     ;
  
+    class_<std::vector<std::string> >("StringVec")
+        .def(vector_indexing_suite<std::vector<std::string> >())
+    ;
+ 
     class_<std::pair<std::vector<std::vector<uint32_t> >, std::vector<uint32_t> > >("CompressedUInt32ColumnsIdsIntPair")
         .def_readwrite("first", &std::pair<std::vector<std::vector<uint32_t> >, std::vector<uint32_t> >::first)
         .def_readwrite("second", &std::pair<std::vector<std::vector<uint32_t> >, std::vector<uint32_t> >::second)
     ;
+
+    class_<std::pair<std::vector<std::string>, std::vector<uint32_t> > >("CompressedStringColumnsIdsIntPair")
+        .def_readwrite("first", &std::pair<std::vector<std::string>, std::vector<uint32_t> >::first)
+        .def_readwrite("second", &std::pair<std::vector<std::string>, std::vector<uint32_t> >::second)
+    ; 
  
     def("save_compress_uint32_int", save_compress<uint32_t, uint32_t>);
     def("load_compress_uint32_int", load_compress<uint32_t, uint32_t>);

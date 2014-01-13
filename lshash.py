@@ -267,12 +267,19 @@ class LSHash(object):
             for i, table in enumerate(self.hash_tables):
                 table.compress()
                 table.save(dirname + '/' + "compressed.cdict")
+
+                table.to_VLQ_base64()
+                table.save(dirname + '/' + "compressed_vlq.cdict")
+ 
                 table.clear()
 
-    def load_compress_index(self, dirname):
+    def load_compress_index(self, dirname, vlq = False):
         if 'random' in self.storage_config:
             for i, table in enumerate(self.hash_tables):
-                table.load(dirname + '/' + "compressed.cdict")
+                if not vlq:
+                    table.load(dirname + '/' + "compressed.cdict")
+                else:
+                    table.load(dirname + '/' + "compressed_vlq.cdict")
 
     def save_index(self, filename):
 
