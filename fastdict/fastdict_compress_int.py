@@ -160,4 +160,57 @@ for buffers in cols_buffer:
         print struct.unpack('Q', data)
     index += 1
 
+## VLQ base64
+
+vlq_dict = fastdict.FastCompressUInt32IntDict(8)
+print "Test VLQ base64"
+print vlq_dict.base64VLQ_encode(123123)
+for val in vlq_dict.base64VLQ_decode(vlq_dict.base64VLQ_encode(123123)):
+    print val
+
+for val in vlq_dict.base64VLQ_decode('AAgBC'):
+    print val
+
+vlq_dict.set(123, 6794572984750169060, 0)
+vlq_dict.append(123, 678, 1)
+print vlq_dict.size()
+
+vlq_dict.go_index() # compress
+vlq_dict.to_VLQ_base64_dict() # to VQL base64 dict
+cols = vlq_dict.get_VLQ_base64_cols(123)
+print cols.first
+print cols.second
+
+for string in cols.first:
+    print string
+    print "decode:"
+    for val in vlq_dict.base64VLQ_decode(string):
+        print val
+for image_id in cols.second:
+    print image_id
+
+print "dict status: " + str(vlq_dict.get_dict_status())
+
+# init runtime VLQ base64 dict
+vlq_dict.init_runtime_VLQ_base64_dict()
+
+print "dict status: " + str(vlq_dict.get_dict_status())
+
+print "buffer:"
+VLQ_cols_buffer = vlq_dict.get_VLQ_base64_cols_as_buffer(123)
+print len(VLQ_cols_buffer)
+print VLQ_cols_buffer
+
+index = 0
+for buffers in VLQ_cols_buffer:    
+    print index
+    for i in range(0, len(buffers)):
+        print struct.unpack('c', buffers[i])
+        print buffers[i]
+    index += 1
+    
+
+ 
+
+
  

@@ -232,6 +232,9 @@ class RandomInMemoryStorage(InMemoryStorage):
     def compress(self):
         self.storage.go_index()
 
+    def to_VLQ_base64(self):
+        self.storage.to_VLQ_base64_dict()
+
     def uncompress_binary_codes(self, reference_key):
  
         neighbor_keys = self.neighbor_keys(reference_key)
