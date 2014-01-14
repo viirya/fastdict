@@ -46,7 +46,7 @@ Parameters:
 * -q: performing sequential sampling, default is 'n' (meaning that default is ramdom sampling)
 * -p: querying in compressed domain, default is 'n' (meaning that plain querying mode)
 * -g: 'y' for GPU-based uncompression. 'n' for CPU-based.
-
+* -l: 'y' for VLQ base64 mode. default is 'n'
 
 
 
