@@ -106,6 +106,7 @@ class RandomInMemoryStorage(InMemoryStorage):
         self.config = config
 
         self.inited_runtime = False
+        self.inited_runtime_VLQ_base64 = False
 
     def init_key_dimension(self, num_of_r, dim, random = True):
         if random:
@@ -211,9 +212,23 @@ class RandomInMemoryStorage(InMemoryStorage):
 
     def init_runtime(self):
         if not self.inited_runtime:
-            print "init rumtine dict..."
-            self.storage.init_runtime_dict()
+            print "init rumtime dict..."
+            if self.storage.get_dict_status() == 0:
+                self.storage.init_runtime_dict()
+            else:
+                print "Incorrect dict mode."
             print "done."
+            self.inited_runtime = True
+
+    def init_runtime_vlq_base64(self):
+        if not self.inited_runtime_VLQ_base64:
+            print "init rumtine VLQ base64 dict..." 
+            if self.storage.get_dict_status() == 1:
+                self.storage.init_runtime_VLQ_base64_dict()
+            else:
+                print "Incorrect dict mode."
+            print "done."
+            self.inited_runtime_VLQ_base64 = True
 
     def save(self, filename):
         fastdict.save_compress_uint32_int(filename, self.storage)
@@ -230,10 +245,16 @@ class RandomInMemoryStorage(InMemoryStorage):
             self.key_dimensions = np.array(key_dimensions)
 
     def compress(self):
-        self.storage.go_index()
+        if self.storage.get_dict_status() == -1:
+            self.storage.go_index()
+        else:
+            print "Incorrect dict mode."
 
     def to_VLQ_base64(self):
-        self.storage.to_VLQ_base64_dict()
+        if self.storage.get_dict_status() == 0:
+            self.storage.to_VLQ_base64_dict()
+        else:
+            print "Incorrect dict mode."
 
     def uncompress_binary_codes(self, reference_key):
  
@@ -241,8 +262,16 @@ class RandomInMemoryStorage(InMemoryStorage):
         actual_key = self.actual_key(reference_key)
         all_keys = np.unique(np.append(neighbor_keys, actual_key))
 
-        self.benchmark_begin('uncompressing binary codes') 
-        binary_codes = self.storage.get_binary_codes(int(actual_key))
+        binary_codes = None
+        self.benchmark_begin('uncompressing binary codes')
+        if self.storage.get_dict_status() == 0:
+            print "non VLQ base64"
+            binary_codes = self.storage.get_binary_codes(int(actual_key))
+        elif self.storage.get_dict_status() == 1:
+            print "VLQ base64"
+            binary_codes = self.storage.get_VLQ_base64_binary_codes(int(actual_key))
+        else:
+            print "Incorrect dict mode."
         self.benchmark_end('uncompressing binary codes') 
 
         return binary_codes
@@ -267,8 +296,19 @@ class RandomInMemoryStorage(InMemoryStorage):
 
         self.benchmark_begin('load cols')
         #cols = self.storage.get_cols(int(actual_key))
-        cols = self.storage.get_cols_as_buffer(int(actual_key))
-        image_ids = self.storage.get_image_ids(int(actual_key))
+
+        cols = None
+        image_ids = None
+
+        if self.storage.get_dict_status() == 2:
+            print "compressed runtime dict"
+            cols = self.storage.get_cols_as_buffer(int(actual_key))
+            image_ids = self.storage.get_image_ids(int(actual_key))
+        elif self.storage.get_dict_status() == 3:
+            print "VLQ base64 compressed runtime dict"
+            cols = self.storage.get_VLQ_base64_cols_as_buffer(int(actual_key))
+            image_ids = self.storage.get_VLQ_base64_image_ids(int(actual_key))
+
         self.benchmark_end('load cols')
 
         #columns = [0] * len(cols.first)
