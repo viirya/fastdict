@@ -279,6 +279,7 @@ class LSHash(object):
                 if not vlq:
                     table.load(dirname + '/' + "compressed.cdict")
                 else:
+                    print "loading VLQ base64 version..."
                     table.load(dirname + '/' + "compressed_vlq.cdict")
 
     def save_index(self, filename):
@@ -326,7 +327,7 @@ class LSHash(object):
         return candidates
 
 
-    def query_in_compressed_domain(self, query_point, num_results=None, distance_func=None, gpu_mode = 'y'):
+    def query_in_compressed_domain(self, query_point, num_results=None, distance_func=None, gpu_mode = 'y', vlq_mode = 'n'):
 
         if distance_func == "hamming":
 
@@ -356,14 +357,17 @@ class LSHash(object):
 
                     else:
 
-                        self.hash_tables[0].init_runtime()
-                        
+                        if vlq_mode == 'n':
+                            self.hash_tables[0].init_runtime()
+                        else:
+                            self.hash_tables[0].init_runtime_vlq_base64()
+
                         (cols, image_ids) = self.hash_tables[0].get_compressed_cols(binary_hash)
                         
                         print "cuda processing..."
                         start = time.clock()
                         
-                        hamming_distances = self.cuda_hamming.cuda_hamming_dist_in_compressed_domain(binary_hash, cols, image_ids)
+                        hamming_distances = self.cuda_hamming.cuda_hamming_dist_in_compressed_domain(binary_hash, cols, image_ids, vlq_mode)
                         
                         elapsed = (time.clock() - start)
                         print "time: " + str(elapsed)

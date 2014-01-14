@@ -191,6 +191,11 @@ for image_id in cols.second:
 
 print "dict status: " + str(vlq_dict.get_dict_status())
 
+print "cpu-based uncompression for VLQ base64"
+binary_codes = vlq_dict.get_VLQ_base64_binary_codes(123)
+for code in binary_codes.first:    
+    print "code: " + str(code)
+
 # init runtime VLQ base64 dict
 vlq_dict.init_runtime_VLQ_base64_dict()
 
