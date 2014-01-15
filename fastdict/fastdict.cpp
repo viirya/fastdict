@@ -19,7 +19,7 @@
 
 #include <boost/python.hpp>
 
-#include <boost/numpy.hpp>
+//#include <boost/numpy.hpp>
 
 
 // base64 encoding table
@@ -263,7 +263,7 @@ class FastCompressDict: public FastDict<IdType> {
 public:
     typedef FastDict<IdType> super;
 
-    FastCompressDict(uint8_t k_dim) : FastDict<IdType>(k_dim) {}
+    FastCompressDict(uint8_t k_dim) : FastDict<IdType>(k_dim) { dict_status = -1; }
 
     friend class boost::serialization::access;
 
@@ -723,10 +723,10 @@ public:
  
     }
  
-    uint8_t VLQ_BASE_SHIFT = 5;
-    uint8_t VLQ_BASE = 1 << VLQ_BASE_SHIFT;
-    uint8_t VLQ_BASE_MASK = VLQ_BASE - 1;
-    uint8_t VLQ_CONTINUATION_BIT = VLQ_BASE;
+    static const uint8_t VLQ_BASE_SHIFT = 5;
+    static const uint8_t VLQ_BASE = 1 << VLQ_BASE_SHIFT;
+    static const uint8_t VLQ_BASE_MASK = VLQ_BASE - 1;
+    static const uint8_t VLQ_CONTINUATION_BIT = VLQ_BASE;
 
     // encoding/decoding VLQ base64
     std::string base64VLQ_encode(BitCountType val) {
@@ -802,7 +802,7 @@ public:
     // 1: VLQ base64 dict           # from 0 by to_VLQ_base64_dict
     // 2: runtime dict              # from 0 by init_runtime_dict
     // 3: VLQ base64 runtime dict   # from 1 by init_runtime_VLQ_base64_dict
-    int dict_status = -1;
+    int dict_status;
 
     std::map<std::vector<uint8_t>, std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > > column_dict;
 
