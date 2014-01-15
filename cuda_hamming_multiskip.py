@@ -279,29 +279,37 @@ __global__ void compressed_hamming_dist(uint64_t* query, uint64_t** bit_counts, 
 typedef unsigned long long int uint64_t;
 __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
 {
-  const uint64_t i = gridDim.x * blockDim.x * blockIdx.y + blockIdx.x * blockDim.x + threadIdx.x;
-  uint64_t xor_r;
+ 
+    const uint64_t i = gridDim.x * blockDim.x * blockIdx.y + blockIdx.x * blockDim.x + threadIdx.x;
+    uint64_t xor_r;
 
-  //if (i < %(length)s) {
-  if (i < length[0]) {
-    xor_r = a[0] ^ b[i];
+    // how many binary codes we uncompress in a cuda thread
+    int batch_size = 50;
+    
+    uint64_t binary_codes[50] = {};
+    const uint64_t i_for_batch = i * batch_size;
 
-    const uint64_t m1  = 0x5555555555555555; 
-    const uint64_t m2  = 0x3333333333333333; 
-    const uint64_t m4  = 0x0f0f0f0f0f0f0f0f; 
-    const uint64_t m8  = 0x00ff00ff00ff00ff; 
-    const uint64_t m16 = 0x0000ffff0000ffff; 
-    const uint64_t m32 = 0x00000000ffffffff; 
-    const uint64_t hff = 0xffffffffffffffff; 
-    const uint64_t h01 = 0x0101010101010101; 
-   
-    xor_r -= (xor_r >> 1) & m1;    
-    xor_r = (xor_r & m2) + ((xor_r >> 2) & m2); 
-    xor_r = (xor_r + (xor_r >> 4)) & m4;        
+    //if (i < %(length)s) {
+    for (int binary_code_index = 0; (binary_code_index < batch_size) && (i_for_batch + binary_code_index < length[0]); binary_code_index++) {
 
-    b[i] = (xor_r * h01) >> 56;
-  }
-
+        xor_r = a[0] ^ b[i_for_batch + binary_code_index];
+        
+        const uint64_t m1  = 0x5555555555555555; 
+        const uint64_t m2  = 0x3333333333333333; 
+        const uint64_t m4  = 0x0f0f0f0f0f0f0f0f; 
+        const uint64_t m8  = 0x00ff00ff00ff00ff; 
+        const uint64_t m16 = 0x0000ffff0000ffff; 
+        const uint64_t m32 = 0x00000000ffffffff; 
+        const uint64_t hff = 0xffffffffffffffff; 
+        const uint64_t h01 = 0x0101010101010101; 
+        
+        xor_r -= (xor_r >> 1) & m1;    
+        xor_r = (xor_r & m2) + ((xor_r >> 2) & m2); 
+        xor_r = (xor_r + (xor_r >> 4)) & m4;        
+        
+        b[i_for_batch + binary_code_index] = (xor_r * h01) >> 56;
+    }
+ 
 }
 """ % {"length": vector_len})
 
