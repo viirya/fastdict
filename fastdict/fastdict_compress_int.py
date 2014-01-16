@@ -4,7 +4,7 @@ import fastdict
 import sys
 import struct
 
-f_dict = fastdict.FastCompressIntDict(8)
+f_dict = fastdict.FastCompressIntDict(16)
 f_dict.set(123, 6794572984750169060, 0)
 print f_dict.size()
 
