@@ -137,8 +137,8 @@ class RandomInMemoryStorage(InMemoryStorage):
 
         #actual_key_bits = np.zeros(32 - len(actual_key_bits)).astype(np.int).tolist() + actual_key_bits
 
-        actual_key_binary = bitarray(actual_key_bits)
-        string = struct.unpack("<I", actual_key_binary.tobytes())[0]
+        actual_key_binary = bitarray(actual_key_bits, endian='big')
+        string = struct.unpack(">I", actual_key_binary.tobytes())[0]
         actual_key = np.array([string]).astype(np.uint32)[0]
 
         return actual_key

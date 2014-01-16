@@ -180,15 +180,16 @@ public:
         // std::cout << "In actual_key() python key: " << int(python_key) << "\n";
 
         // for efficiency consideration, index_key_dimension should be divisible by 8
-
-        // int times = index_key_dimension / 8;
         for (int i = 0; i < 4; ++i) {
-            key.insert(key.end(), (uint8_t)((python_key & base) >> (8 * (4 - i - 1))));
+            current_bits = (uint8_t)((python_key & base) >> (8 * (4 - i - 1)));
+            if (index_key_dimension > (8 * (4 - i - 1)))
+                key.insert(key.end(), current_bits);
             base = base >> 8;
         }
 
         // for test
         /*
+        std::cout << "key: ";
         BOOST_FOREACH(uint8_t k, key) {
             std::cout << " " << int(k);
         }
