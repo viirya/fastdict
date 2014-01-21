@@ -36,6 +36,10 @@ print f_dict.keys()
 for key in f_dict.keys():
     print "key: " + str(key)
 
+for key in f_dict.mget([123, 456]):
+    print key.first
+    print key.second
+
 f_dict.set_keydimensions([1, 2, 3])
 
 fastdict.save_compress_int("test.dict", f_dict)
@@ -140,6 +144,12 @@ binary_codes = f_dict.get_binary_codes(123)
 for code in binary_codes.first:
     print "code: " + str(code)
 
+print "mget binary codes:"
+binary_codes = f_dict.mget_binary_codes([123, 456])
+for code in binary_codes.first:
+    print "code: " + str(code)
+ 
+
 # initialze runtime dict
 print "init runtime dict..."
 f_dict.init_runtime_dict()
@@ -195,6 +205,12 @@ print "cpu-based uncompression for VLQ base64"
 binary_codes = vlq_dict.get_VLQ_base64_binary_codes(123)
 for code in binary_codes.first:    
     print "code: " + str(code)
+
+print "mget VQL base64 binary codes:"
+binary_codes = vlq_dict.mget_VLQ_base64_binary_codes([123])
+for code in binary_codes.first:    
+    print "code: " + str(code)
+ 
 
 # init runtime VLQ base64 dict
 vlq_dict.init_runtime_VLQ_base64_dict()
