@@ -178,27 +178,35 @@ class RandomInMemoryStorage(InMemoryStorage):
 
         return vals
 
-    def keys(self, reference_key, snd_extend = True):
-        neighbor_keys = self.neighbor_keys(reference_key)
+    def expand_key(self, actual_key, level = 1):
+        expanded_keys = np.bitwise_xor(actual_key, self.bases)
+        if level > 1:
+            neighbor_keys = expanded_keys
+            for neighbor_key in neighbor_keys:
+                expanded_keys = np.append(expanded_keys, self.expand_key(neighbor_key, level - 1))
 
-        if snd_extend == True:
-            extends_n_keys = neighbor_keys
-            for n_key in neighbor_keys:
-                extends_n_keys = np.append(extends_n_keys, np.bitwise_xor(n_key, self.bases))
-            
-            neighbor_keys = extends_n_keys
+        return np.unique(np.array(expanded_keys))
 
+    # given sub-sampled key, return all expanded sub-sampled keys
+    def actual_keys(self, reference_key, level = 1):
+ 
         actual_key = self.actual_key(reference_key)
+        if level > 0:
+            neighbor_keys = self.expand_key(actual_key, level)
+            all_keys = np.unique(np.append(neighbor_keys, actual_key)).astype(np.uint32)
+        else:
+            all_keys = np.array([actual_key]).astype(np.uint32)
+        return all_keys
+ 
+    # given sub-sampled key, retrieve all binary codes in corresponding buckets
+    def keys(self, reference_key, level = 1):
 
-        all_keys = np.unique(np.append(neighbor_keys, actual_key))
-        
+        all_keys = self.actual_keys(reference_key, level)  
+
         keys = []
-        #storage_keys = self.storage.keys()
-        for short_key in all_keys:
-            short_key = int(short_key)
-            if self.storage.exist(short_key):
-                for key_value in self.storage.get(short_key):
-                    keys.append(str(key_value.first))
+
+        for key_value in self.storage.mget(all_keys.tolist()):
+            keys.append(str(key_value.first))
 
         return keys
  
@@ -256,20 +264,16 @@ class RandomInMemoryStorage(InMemoryStorage):
         else:
             print "Incorrect dict mode."
 
-    def uncompress_binary_codes(self, reference_key):
+    def uncompress_binary_codes(self, reference_key, level):
  
-        neighbor_keys = self.neighbor_keys(reference_key)
-        actual_key = self.actual_key(reference_key)
-        all_keys = np.unique(np.append(neighbor_keys, actual_key))
-
         binary_codes = None
         self.benchmark_begin('uncompressing binary codes')
         if self.storage.get_dict_status() == 0:
             print "non VLQ base64"
-            binary_codes = self.storage.get_binary_codes(int(actual_key))
+            binary_codes = self.storage.mget_binary_codes(self.actual_keys(reference_key, level).tolist())
         elif self.storage.get_dict_status() == 1:
             print "VLQ base64"
-            binary_codes = self.storage.get_VLQ_base64_binary_codes(int(actual_key))
+            binary_codes = self.storage.mget_VLQ_base64_binary_codes(self.actual_keys(reference_key, level).tolist())
         else:
             print "Incorrect dict mode."
         self.benchmark_end('uncompressing binary codes') 
@@ -290,9 +294,9 @@ class RandomInMemoryStorage(InMemoryStorage):
 
     def get_compressed_cols(self, reference_key):
     
-        neighbor_keys = self.neighbor_keys(reference_key)
+        #neighbor_keys = self.neighbor_keys(reference_key)
         actual_key = self.actual_key(reference_key)
-        all_keys = np.unique(np.append(neighbor_keys, actual_key))
+        #all_keys = np.unique(np.append(neighbor_keys, actual_key))
 
         self.benchmark_begin('load cols')
         #cols = self.storage.get_cols(int(actual_key))

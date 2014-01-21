@@ -72,7 +72,6 @@ class LSHash(object):
         self._init_uniform_planes()
         self._init_hashtables()
 
-
         self.loaded_keys = None
 
         self.cuda_hamming = CudaHamming()
@@ -303,7 +302,7 @@ class LSHash(object):
             print("IOError when saving matrices to specificed path")
             raise
 
-    def load_keys(self, key = None):
+    def load_keys(self, key = None, expand_level = 1):
 
         if 'random' in self.storage_config and key == None: 
             return
@@ -311,7 +310,7 @@ class LSHash(object):
         print "loading keys..."
         self.loaded_keys = []
         for i, table in enumerate(self.hash_tables):
-            keys = table.keys(key)
+            keys = table.keys(key, expand_level)
             self.loaded_keys.append(np.array(keys).astype(np.uint64))
 
     def fetch_extra_data(self, hamming_candidates):
@@ -327,7 +326,7 @@ class LSHash(object):
         return candidates
 
 
-    def query_in_compressed_domain(self, query_point, num_results=None, distance_func=None, gpu_mode = 'y', vlq_mode = 'n'):
+    def query_in_compressed_domain(self, query_point, num_results=None, expand_level = 1, distance_func=None, gpu_mode = 'y', vlq_mode = 'n'):
 
         if distance_func == "hamming":
 
@@ -343,7 +342,7 @@ class LSHash(object):
                         print "cpu-based uncompressing..."
                         start = time.clock()
 
-                        b_codes = self.hash_tables[0].uncompress_binary_codes(binary_hash)
+                        b_codes = self.hash_tables[0].uncompress_binary_codes(binary_hash, expand_level)
 
                         binary_codes = []
                         for binary_code in b_codes.first:
@@ -373,7 +372,7 @@ class LSHash(object):
                         print "time: " + str(elapsed)
 
 
-    def query(self, query_point, num_results=None, distance_func=None):
+    def query(self, query_point, num_results=None, expand_level = 1, distance_func=None):
         """ Takes `query_point` which is either a tuple or a list of numbers,
         returns `num_results` of results as a list of tuples that are ranked
         based on the supplied metric function `distance_func`.
@@ -404,7 +403,7 @@ class LSHash(object):
                 if 'random' in self.storage_config:
                     print "fetch keys..."
                     start = time.clock()
-                    self.load_keys(binary_hash)
+                    self.load_keys(binary_hash, expand_level)
                     elapsed = (time.clock() - start)
                     print "time: " + str(elapsed)
 
