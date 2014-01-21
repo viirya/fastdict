@@ -96,6 +96,7 @@ def main():
     parser.add_argument('-p', default = 'n', help = 'Whether to perform querying in compressed domain.')
     parser.add_argument('-g', default = 'y', help = 'GPU mode. default is "yes".')
     parser.add_argument('-l', default = 'n', help = 'VLQ base64 mode. Load VLQ base64 encoding compressed dict.')
+    parser.add_argument('-b', default = '1', help = 'Expanding level of search buckets.')
  
 
     args = parser.parse_args()
@@ -132,9 +133,9 @@ def main():
             lsh.load_index(args.e)
             print "loading done."
         if args.p != 'y':
-            retrived = lsh.query(np_feature_vecs[1], num_results = int(args.k), distance_func = 'hamming')
+            retrived = lsh.query(np_feature_vecs[1], num_results = int(args.k), expand_level = int(args.b), distance_func = 'hamming')
         else:
-            retrived = lsh.query_in_compressed_domain(np_feature_vecs[1], num_results = int(args.k), distance_func = 'hamming', gpu_mode = args.g, vlq_mode = args.l)
+            retrived = lsh.query_in_compressed_domain(np_feature_vecs[1], num_results = int(args.k), expand_level = int(args.b), distance_func = 'hamming', gpu_mode = args.g, vlq_mode = args.l)
         print retrived
 
 if __name__ == "__main__":
