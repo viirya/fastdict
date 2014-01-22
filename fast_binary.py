@@ -34,9 +34,12 @@ def load_features(filename, file_format, total_nuse, dimension, lsh, index_folde
         elif file_format == 'bvecs':
             part_np_feature_vecs = yael.bvec_to_numpy(feature_vecs, int(actual_nuse) * dimension)
 
-        part_np_feature_vecs = part_np_feature_vecs.reshape((int(actual_nuse), dimension))
+        # for CUDA-based batch indexing, skip the reshaping
+        #part_np_feature_vecs = part_np_feature_vecs.reshape((int(actual_nuse), dimension))
 
         if run_index != 'y':
+            part_np_feature_vecs = part_np_feature_vecs.reshape((int(actual_nuse), dimension))
+
             if np_feature_vecs != None:
                 np_feature_vecs = numpy.concatenate((np_feature_vecs, part_np_feature_vecs))
             else:
@@ -59,9 +62,8 @@ def index(lsh, np_feature_vecs, label_idx):
 
     print "indexing..."
 
-    for vec in np_feature_vecs:
-        lsh.index(vec, extra_data = label_idx)
-        label_idx += 1
+    # batch indexing by CUDA
+    lsh.cuda_index(np_feature_vecs, label_idx)
 
     print "indexing done."
 

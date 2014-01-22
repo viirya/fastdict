@@ -15,6 +15,7 @@ import pickle
 from storage import storage
 
 from cuda_hamming import CudaHamming
+from cuda_indexing import CudaIndexing
 
 try:
     from bitarray import bitarray
@@ -75,6 +76,8 @@ class LSHash(object):
         self.loaded_keys = None
 
         self.cuda_hamming = CudaHamming()
+
+        self.cuda_indexing = CudaIndexing()
 
     def _init_uniform_planes(self):
         """ Initialize uniform planes used to calculate the hashes
@@ -154,7 +157,7 @@ class LSHash(object):
             raise
         else:
             string = "".join(['1' if i > 0 else '0' for i in projections])
-            string = struct.unpack("<Q", bitarray(string).tobytes())[0]
+            string = struct.unpack(">Q", bitarray(string).tobytes())[0]
             binary_hash = np.array([string]).astype(np.uint64)
             return binary_hash[0] # bitarray(string).tobytes()
 
@@ -211,10 +214,10 @@ class LSHash(object):
         if isinstance(input_point, np.ndarray):
             input_point = input_point.tolist()
 
-        if extra_data != None:
-            value = (tuple(input_point), extra_data)
-        else:
-            value = tuple(input_point)
+        #if extra_data != None:
+        #    value = (tuple(input_point), extra_data)
+        #else:
+        #    value = tuple(input_point)
 
         # customised: we only care about extra_data
         value = (extra_data)
@@ -222,6 +225,15 @@ class LSHash(object):
         for i, table in enumerate(self.hash_tables):
             table.append_val(self._hash(self.uniform_planes[i], input_point),
                              value)
+    def cuda_index(self, input_points, extra_data = None):
+
+        # we have only one table
+        indexed_data = self.cuda_indexing.batch_indexing(self.uniform_planes[0], input_points)
+
+        for data in indexed_data:
+            self.hash_tables[0].append_val(data, extra_data)
+            extra_data += 1
+            
 
     def load_index(self, dirname):
 

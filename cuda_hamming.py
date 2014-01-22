@@ -365,4 +365,4 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         
         return dest
 
-
+ 
