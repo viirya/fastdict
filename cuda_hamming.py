@@ -273,19 +273,49 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         elapsed = (time.clock() - self.start)
         print "time: " + str(elapsed)
 
-    def cuda_hamming_dist_in_compressed_domain(self, vec_a, compressed_columns, image_ids, vlq_mode):
+    def alloc_device_memory_for_cols(self, compressed_columns_vec, vlq_mode):
+
+        gpu_alloc_objs = []
+        for col_idx in range(0, 64):
+
+            col_len = 0
+            for bucket_idx in range(0, len(compressed_columns_vec)):
+                if len(compressed_columns_vec[bucket_idx]) > 0:
+                    col_len += len(compressed_columns_vec[bucket_idx][col_idx]) # buffer length in bytes
+
+            concate_col = numpy.zeros(col_len).astype(numpy.uint8)
+ 
+            col_len = 0
+            for bucket_idx in range(0, len(compressed_columns_vec)):
+                if len(compressed_columns_vec[bucket_idx]) > 0:
+                    cur_col_len = len(compressed_columns_vec[bucket_idx][col_idx])
+                    numpy.copyto(concate_col[col_len:col_len + cur_col_len], compressed_columns_vec[bucket_idx][col_idx])
+                    col_len += cur_col_len
+                    
+            col_ptr = drv.mem_alloc(col_len)
+            drv.memcpy_htod(int(col_ptr), concate_col)
+
+            #col_len = 0
+            #for bucket_idx in range(0, len(compressed_columns_vec)):
+            #    if len(compressed_columns_vec[bucket_idx]) > 0:
+            #        drv.memcpy_htod(int(col_ptr) + col_len, compressed_columns_vec[bucket_idx][col_idx])
+            #        col_len += len(compressed_columns_vec[bucket_idx][col_idx])
+
+            gpu_alloc_objs.append(col_ptr)
+
+        return gpu_alloc_objs
+            
+
+    def cuda_hamming_dist_in_compressed_domain(self, vec_a, compressed_columns_vec, image_ids, vlq_mode):
 
         binary_code_length = len(image_ids)
 
         self.benchmark_begin('preparing')
 
         addresses = [] 
-        gpu_alloc_objs = []
-        for column in compressed_columns:
-            #column_addr = drv.to_device(buffer(array.array('L', column), 0))
-            column_addr = drv.to_device(column)
-            gpu_alloc_objs.append(column_addr)
-            addresses.append(int(column_addr))
+        gpu_alloc_objs = self.alloc_device_memory_for_cols(compressed_columns_vec, vlq_mode)
+        for address in gpu_alloc_objs:
+            addresses.append(int(address))
 
         np_addresses = numpy.array(addresses).astype(numpy.uint64)
 
@@ -295,13 +325,8 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
 
         drv.memcpy_htod(arrays_gpu, np_addresses)
 
-
-    	#binary_code_length = 140000
-
         distances = numpy.zeros(binary_code_length).astype(numpy.uint64)
 
-        #binary_code_length = 10000
- 
         length = numpy.array([binary_code_length]).astype(numpy.uint64)
  
         print "total: " + str(binary_code_length) + " compressed binary codes." 
@@ -325,7 +350,7 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         print distances
         count = 0
         for dis in distances:
-            print "count: " + str(count) + " " + str(dis) + " image: " + str(image_ids[count])
+            print "count: " + str(count) + " " + str(dis) + " image: " + str(image_ids[count]) + "."
             count += 1
         print distances.shape
 

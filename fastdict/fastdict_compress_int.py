@@ -162,6 +162,7 @@ print cols_buffer
 index = 0
 for buffers in cols_buffer:
     print index
+    print "len: " + str(len(buffers))
     for i in range(0, len(buffers) / 8):
         data = ''
         for j in range(i * 8, i * 8 + 8):
@@ -169,6 +170,24 @@ for buffers in cols_buffer:
         print data
         print struct.unpack('Q', data)
     index += 1
+ 
+print "get multiple buffers:"
+cols_buffers = f_dict.mget_cols_as_buffer([123, 456])
+print len(cols_buffers)
+print cols_buffers
+
+for cols_buffer in cols_buffers:
+    index = 0
+    for buffers in cols_buffer:
+        print index
+        for i in range(0, len(buffers) / 8):
+            data = ''
+            for j in range(i * 8, i * 8 + 8):
+                data = data + buffers[j]
+            print data
+            print struct.unpack('Q', data)
+        index += 1
+
 
 ## VLQ base64
 
@@ -230,7 +249,20 @@ for buffers in VLQ_cols_buffer:
         print buffers[i]
     index += 1
     
+print "multiple buffer:"
+VLQ_cols_buffers = vlq_dict.mget_VLQ_base64_cols_as_buffer([123])
+print len(VLQ_cols_buffers)
+print VLQ_cols_buffers
 
+for VLQ_cols_buffer in VLQ_cols_buffers:
+    index = 0
+    for buffers in VLQ_cols_buffer:    
+        print index
+        for i in range(0, len(buffers)):
+            print struct.unpack('c', buffers[i])
+            print buffers[i]
+        index += 1
+ 
  
 
 

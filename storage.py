@@ -292,10 +292,11 @@ class RandomInMemoryStorage(InMemoryStorage):
                 print struct.unpack('Q', data)
             index += 1
 
-    def get_compressed_cols(self, reference_key):
+    # obtain compressed columns for binary codes to be uncompress with GPU
+    def get_compressed_cols(self, reference_key, level = 0):
     
         #neighbor_keys = self.neighbor_keys(reference_key)
-        actual_key = self.actual_key(reference_key)
+        #actual_key = self.actual_key(reference_key)
         #all_keys = np.unique(np.append(neighbor_keys, actual_key))
 
         self.benchmark_begin('load cols')
@@ -306,12 +307,12 @@ class RandomInMemoryStorage(InMemoryStorage):
 
         if self.storage.get_dict_status() == 2:
             print "compressed runtime dict"
-            cols = self.storage.get_cols_as_buffer(int(actual_key))
-            image_ids = self.storage.get_image_ids(int(actual_key))
+            cols = self.storage.mget_cols_as_buffer(self.actual_keys(reference_key, level).tolist())
+            image_ids = self.storage.mget_image_ids(self.actual_keys(reference_key, level).tolist())
         elif self.storage.get_dict_status() == 3:
             print "VLQ base64 compressed runtime dict"
-            cols = self.storage.get_VLQ_base64_cols_as_buffer(int(actual_key))
-            image_ids = self.storage.get_VLQ_base64_image_ids(int(actual_key))
+            cols = self.storage.mget_VLQ_base64_cols_as_buffer(self.actual_keys(reference_key, level).tolist())
+            image_ids = self.storage.mget_VLQ_base64_image_ids(self.actual_keys(reference_key, level).tolist())
 
         self.benchmark_end('load cols')
 

@@ -373,12 +373,12 @@ class LSHash(object):
                         else:
                             self.hash_tables[0].init_runtime_vlq_base64()
 
-                        (cols, image_ids) = self.hash_tables[0].get_compressed_cols(binary_hash)
+                        (cols_vector, image_ids) = self.hash_tables[0].get_compressed_cols(binary_hash, expand_level)
                         
                         print "cuda processing..."
                         start = time.clock()
                         
-                        hamming_distances = self.cuda_hamming.cuda_hamming_dist_in_compressed_domain(binary_hash, cols, image_ids, vlq_mode)
+                        hamming_distances = self.cuda_hamming.cuda_hamming_dist_in_compressed_domain(binary_hash, cols_vector, image_ids, vlq_mode)
                         
                         elapsed = (time.clock() - start)
                         print "time: " + str(elapsed)
