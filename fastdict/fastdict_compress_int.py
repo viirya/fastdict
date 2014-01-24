@@ -14,8 +14,11 @@ print f_dict.get(123)[0].first
 print f_dict.get(123)[0].second
  
 f_dict.append(123, 678, 1)
-print f_dict.size()
+print "size: ", f_dict.size()
 
+f_dict.batch_append([123, 123], [456, 123123], [3, 4])
+print "size: ", f_dict.size()
+ 
 print f_dict.get(123)
 print f_dict.get(123)[0]
 print f_dict.get(123)[0].first

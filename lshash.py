@@ -230,9 +230,11 @@ class LSHash(object):
         # we have only one table
         indexed_data = self.cuda_indexing.batch_indexing(self.uniform_planes[0], input_points)
 
-        for data in indexed_data:
-            self.hash_tables[0].append_val(data, extra_data)
-            extra_data += 1
+        #for data in indexed_data:
+        #    self.hash_tables[0].append_val(data, extra_data)
+        #    extra_data += 1
+
+        self.hash_tables[0].batch_append_vals(indexed_data.tolist(), extra_data)
             
 
     def load_index(self, dirname):

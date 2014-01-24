@@ -3,6 +3,7 @@ import pycuda.driver as drv
 import numpy
 import array
 import time
+import math
 
 from pycuda.compiler import SourceModule
 
@@ -273,18 +274,17 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         elapsed = (time.clock() - self.start)
         print "time: " + str(elapsed)
 
-    def alloc_device_memory_for_cols(self, compressed_columns_vec, vlq_mode):
+    def alloc_device_memory_for_cols(self, compressed_columns_vec, vlq_mode, max_length):
 
+        concate_col = None
+        if vlq_mode == 'n':
+            concate_col = numpy.zeros(max_length * 8).astype(numpy.uint8)
+        else:
+            concate_col = numpy.zeros(max_length).astype(numpy.uint8)
+ 
         gpu_alloc_objs = []
         for col_idx in range(0, 64):
 
-            col_len = 0
-            for bucket_idx in range(0, len(compressed_columns_vec)):
-                if len(compressed_columns_vec[bucket_idx]) > 0:
-                    col_len += len(compressed_columns_vec[bucket_idx][col_idx]) # buffer length in bytes
-
-            concate_col = numpy.zeros(col_len).astype(numpy.uint8)
- 
             col_len = 0
             for bucket_idx in range(0, len(compressed_columns_vec)):
                 if len(compressed_columns_vec[bucket_idx]) > 0:
@@ -293,7 +293,7 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
                     col_len += cur_col_len
                     
             col_ptr = drv.mem_alloc(col_len)
-            drv.memcpy_htod(int(col_ptr), concate_col)
+            drv.memcpy_htod(int(col_ptr), concate_col[0:col_len])
 
             #col_len = 0
             #for bucket_idx in range(0, len(compressed_columns_vec)):
@@ -313,7 +313,7 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         self.benchmark_begin('preparing')
 
         addresses = [] 
-        gpu_alloc_objs = self.alloc_device_memory_for_cols(compressed_columns_vec, vlq_mode)
+        gpu_alloc_objs = self.alloc_device_memory_for_cols(compressed_columns_vec, vlq_mode, binary_code_length)
         for address in gpu_alloc_objs:
             addresses.append(int(address))
 
@@ -334,16 +334,20 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         self.benchmark_end('preparing')
         self.benchmark_begin('cudaing')
 
+        custom_grid = (int(math.ceil(float(binary_code_length) / (50 * 256))), 1)
+
+        print "custom grid: ", custom_grid
+
         if vlq_mode == 'n':
             print "non VLQ base64 cuda uncompression and hamming distance calculation"
             self.compressed_hamming_dist(
                 drv.In(vec_a), arrays_gpu, drv.In(length), drv.Out(distances),
-                block = self.block, grid = self.grid)
+                block = self.block, grid = custom_grid)
         else:
             print "VLQ base64 cuda uncompression and hamming distance calculation"
             self.vlq_compressed_hamming_dist(
                 drv.In(vec_a), arrays_gpu, drv.In(length), drv.Out(distances),
-                block = self.block, grid = self.grid)
+                block = self.block, grid = custom_grid)
         
         self.benchmark_end('cudaing')
 
@@ -378,10 +382,13 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
  
         #for d in dest:
         #    print d
+
+        custom_grid = (int(math.ceil(float(length[0]) / (50 * 256))), 1)
+        print "custom grid: ", custom_grid
  
         self.hamming_dist(
                 drv.In(vec_a), drv.InOut(dest), drv.In(length),
-                block = self.block, grid = self.grid)
+                block = self.block, grid = custom_grid)
         
         print dest
         #for d in dest:

@@ -174,7 +174,16 @@ public:
         std::pair<uint64_t, IdType> element(hash_key, id);
         dict[bool_key].insert(dict[bool_key].end(), element);
     }
+ 
+    void batch_append(boost::python::list& keys, boost::python::list& hash_keys, boost::python::list& ids) {
+        for (int i = 0; i < len(keys); i++) {
+            std::vector<uint8_t> bool_key = actual_key(boost::python::extract<uint32_t>(keys[i]));
 
+            std::pair<uint64_t, IdType> element(boost::python::extract<uint64_t>(hash_keys[i]), boost::python::extract<IdType>(ids[i]));
+            dict[bool_key].insert(dict[bool_key].end(), element);
+        }
+    }
+ 
     std::vector<uint32_t> keys() {
         std::pair<std::vector<uint8_t>, std::vector<std::pair<uint64_t, IdType> > > me;
         std::vector<uint32_t> keys;
@@ -1008,6 +1017,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("mget", &FastDict<std::string>::mget)
         .def("set", &FastDict<std::string>::set)
         .def("append", &FastDict<std::string>::append)
+        .def("batch_append", &FastDict<std::string>::batch_append)
         .def("size", &FastDict<std::string>::size)
         .def("keys", &FastDict<std::string>::keys)
         .def("set_keydimensions", &FastDict<std::string>::set_keydimensions)
@@ -1039,6 +1049,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("mget", &FastDict<uint32_t>::mget)
         .def("set", &FastDict<uint32_t>::set)
         .def("append", &FastDict<uint32_t>::append)
+        .def("batch_append", &FastDict<uint32_t>::batch_append)
         .def("size", &FastDict<uint32_t>::size)
         .def("keys", &FastDict<uint32_t>::keys)
         .def("set_keydimensions", &FastDict<uint32_t>::set_keydimensions)
@@ -1065,6 +1076,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("mget", &FastCompressDict<uint8_t, uint32_t>::mget)
         .def("set", &FastCompressDict<uint8_t, uint32_t>::set)
         .def("append", &FastCompressDict<uint8_t, uint32_t>::append)
+        .def("batch_append", &FastCompressDict<uint8_t, uint32_t>::batch_append)
         .def("size", &FastCompressDict<uint8_t, uint32_t>::size)
         .def("keys", &FastCompressDict<uint8_t, uint32_t>::keys)
         .def("set_keydimensions", &FastCompressDict<uint8_t, uint32_t>::set_keydimensions)
@@ -1141,6 +1153,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("mget", &FastCompressDict<uint32_t, uint32_t>::mget)
         .def("set", &FastCompressDict<uint32_t, uint32_t>::set)
         .def("append", &FastCompressDict<uint32_t, uint32_t>::append)
+        .def("batch_append", &FastCompressDict<uint32_t, uint32_t>::batch_append)
         .def("size", &FastCompressDict<uint32_t, uint32_t>::size)
         .def("keys", &FastCompressDict<uint32_t, uint32_t>::keys)
         .def("set_keydimensions", &FastCompressDict<uint32_t, uint32_t>::set_keydimensions)

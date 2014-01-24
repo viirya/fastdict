@@ -167,6 +167,17 @@ class RandomInMemoryStorage(InMemoryStorage):
         #print "val: " + str(val)
         self.storage.append(int(actual_key), long(key), int(val))
 
+    def batch_append_vals(self, keys, val):
+        vals = []
+        actual_keys = []
+        for key in keys:
+            actual_keys.append(int(self.actual_key(key)))
+            vals.append(val)
+            val += 1
+
+        self.storage.batch_append(actual_keys, keys, vals)    
+
+
     def get_list(self, key, filter_code):
         actual_key = self.actual_key(key)
 
