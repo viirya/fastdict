@@ -1,11 +1,14 @@
-### Fast hamming distance-based image retrieval using cuda
+## Fast hamming distance-based image retrieval using cuda
 
-This repo includes tools used for conducting experiments of image retrieval by using cuda.
+This repo includes tools used for conducting experiments of image retrieval by using CUDA.
 
-## Prerequisites
+### Prerequisites
+
+Install Python 2.7.
 
 Install few python modules:
 
+    pip install numpy
 	pip install bitarray
 	pip install redis
 	
@@ -15,15 +18,15 @@ Download and compile [yael library](https://gforge.inria.fr/projects/yael). Copy
 
 This repo uses modified [LSHash](https://github.com/kayzh/LSHash).
 
-## Useful datasets
+### Useful datasets
 
 [ANN_SIFT1B](http://corpus-texmex.irisa.fr/)
 
 
-## Usage
+### Usage
 
 
-# Binary code indexing and retrieval using cuda
+#### Binary code indexing and retrieval using cuda
 
 	python fast_binary.py -f sift_base.fvecs
 
