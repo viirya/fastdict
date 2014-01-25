@@ -6,17 +6,32 @@ This repo includes tools used for conducting experiments of image retrieval by u
 
 Install Python 2.7.
 
-Install few python modules:
+Install Python modules:
 
     pip install numpy
 	pip install bitarray
 	pip install redis
 	
-Checkout and install pycuda.
+Other prerequisites:
+
+* PyCuda
+* Boost
+* Boost::Python
+* Boost::Serialization
 
 Download and compile [yael library](https://gforge.inria.fr/projects/yael). Copy generated `yael.py`, `_yael.so` under the same path of these scripts.
 
 This repo uses modified [LSHash](https://github.com/kayzh/LSHash).
+
+### Build
+
+To build fastdict:
+
+    mkdir build
+    cd build
+    cmake path_to_fastdict/
+    make
+    cp fastdict.so path_to_repo/
 
 ### Useful datasets
 
