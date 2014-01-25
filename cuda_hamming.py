@@ -352,11 +352,13 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         self.benchmark_end('cudaing')
 
         print distances
-        count = 0
-        for dis in distances:
-            print "count: " + str(count) + " " + str(dis) + " image: " + str(image_ids[count]) + "."
-            count += 1
+        #count = 0
+        #for dis in distances:
+        #    print "count: " + str(count) + " " + str(dis) + " image: " + str(image_ids[count]) + "."
+        #    count += 1
         print distances.shape
+
+        return distances
 
     def multi_iteration(self, vec_a, vec_b):
 

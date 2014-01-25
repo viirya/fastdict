@@ -175,7 +175,9 @@ class RandomInMemoryStorage(InMemoryStorage):
             vals.append(val)
             val += 1
 
-        self.storage.batch_append(actual_keys, keys, vals)    
+        self.benchmark_begin('batch insert to fastdict')
+        self.storage.batch_append(actual_keys, keys, vals) 
+        self.benchmark_end('batch insert to fastdict')   
 
 
     def get_list(self, key, filter_code):
@@ -215,11 +217,13 @@ class RandomInMemoryStorage(InMemoryStorage):
         all_keys = self.actual_keys(reference_key, level)  
 
         keys = []
+        image_ids = []
 
         for key_value in self.storage.mget(all_keys.tolist()):
             keys.append(str(key_value.first))
+            image_ids.append(key_value.second)
 
-        return keys
+        return (keys, image_ids)
  
     def get_neighbor_vals(self, key):
         neighbor_keys = self.neighbor_keys(key)

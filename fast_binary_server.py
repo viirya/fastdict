@@ -5,6 +5,7 @@ import yutils
 import yael
 import timeit
 import time
+import os
 import argparse
 
 import tornado.ioloop
@@ -60,23 +61,39 @@ def init():
     parser.add_argument('-o', default = '0', help = 'Offset of accessing raw image features.')
     parser.add_argument('-n', default = '1', help = 'Number of raw image features to read.')
     parser.add_argument('-i', default = 'n', help = 'Whether to perform indexing step.')
-    parser.add_argument('-e', help = 'The filename of indexing file.')
+    parser.add_argument('-e', help = 'The dirname of indexing folder.')
     parser.add_argument('-k', default = '10', help = 'Number of retrieved images.')
-
+    parser.add_argument('-r', default = '32', help = 'Number of dimensions randomly sampled.')
+    parser.add_argument('-c', default = 'n', help = 'Whether to perform compressing step.')
+    parser.add_argument('-q', default = 'n', help = 'Whether to sequentially sampling.')
+    parser.add_argument('-p', default = 'n', help = 'Whether to perform querying in compressed domain.')
+    parser.add_argument('-g', default = 'y', help = 'GPU mode. default is "yes".')
+    parser.add_argument('-l', default = 'n', help = 'VLQ base64 mode. Load VLQ base64 encoding compressed dict.')
+    parser.add_argument('-b', default = '1', help = 'Expanding level of search buckets.')
+ 
     args = parser.parse_args()
-
+ 
     d = int(args.d)
     nuse = int(args.n)
     off = int(args.o)
+    random_dims = int(args.r)
+ 
+    random_sampling = True
+    if args.q == 'y':
+        random_sampling = False
 
-    lsh = LSHash(64, d, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
+    lsh = LSHash(64, d, random_sampling, random_dims, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
     np_feature_vecs = load_features(args.f, args.v, nuse, d, off)
 
-    if args.e != None and (args.s == 'dict' or args.s == 'random'):
-        lsh.load_index(args.e)
-    elif args.s != 'redis':
-        print "Please specify generated indexing file, or use redis mode."
-        sys.exit(0)
+    if args.c != 'y' and args.i != 'y' and args.e != None and args.s == 'random':
+        if args.p == 'y':
+            print "loading compressed index."
+            lsh.load_compress_index(args.e, (args.l == 'y'))
+            print "loading done."
+        else:
+            print "loading index."
+            lsh.load_index(args.e)
+            print "loading done."
 
     print "indexing done. Ready for querying."
 
@@ -88,8 +105,12 @@ def init():
 class QueryHandler(tornado.web.RequestHandler):
     def get(self, image_id):
         self.write("You requested the image: " + image_id)
- 
-        retrived = lsh.query(np_feature_vecs[long(image_id)], num_results = int(args.k), distance_func = 'hamming')
+
+        if args.p != 'y':
+            retrived = lsh.query(np_feature_vecs[long(image_id)], num_results = int(args.k), expand_level = int(args.b), distance_func = 'hamming')
+        else:            
+            retrived = lsh.query_in_compressed_domain(np_feature_vecs[long(image_id)], num_results = int(args.k), expand_level = int(args.b), distance_func = 'hamming', gpu_mode = args.g, vlq_mode = args.l)
+
         self.write(str(retrived))
         print retrived
  

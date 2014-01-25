@@ -322,10 +322,10 @@ class LSHash(object):
             return
 
         print "loading keys..."
-        self.loaded_keys = []
-        for i, table in enumerate(self.hash_tables):
-            keys = table.keys(key, expand_level)
-            self.loaded_keys.append(np.array(keys).astype(np.uint64))
+        (keys, image_ids) = self.hash_tables[0].keys(key, expand_level)
+
+        return (np.array(keys).astype(np.uint64), image_ids)
+
 
     def fetch_extra_data(self, hamming_candidates):
 
@@ -334,7 +334,6 @@ class LSHash(object):
         for cand in hamming_candidates:
             key = cand[0]
             dist = cand[1]
-            #binary_code = cand[2]
             candidates.append([key, table.get_list(key, key), dist])
 
         return candidates
@@ -366,7 +365,10 @@ class LSHash(object):
                         elapsed = (time.clock() - start)
                         print "time: " + str(elapsed)
 
-                        self.query_with_binary_codes(binary_hash, np.array(binary_codes).astype(np.uint64), num_results)
+                        binary_codes = np.array(binary_codes).astype(np.uint64)
+                        hamming_distances = self.query_with_binary_codes(binary_hash, binary_codes, num_results)
+
+                        return self.sorting(b_codes.second, hamming_distances)
 
                     else:
 
@@ -384,6 +386,8 @@ class LSHash(object):
                         
                         elapsed = (time.clock() - start)
                         print "time: " + str(elapsed)
+
+                        return self.sorting(image_ids, hamming_distances)
 
 
     def query(self, query_point, num_results=None, expand_level = 1, distance_func=None):
@@ -406,7 +410,7 @@ class LSHash(object):
             will used.
         """
 
-        if distance_func == "hamming":
+        if distance_func == "hamming" and 'random' in self.storage_config:
             if not bitarray:
                 raise ImportError(" Bitarray is required for hamming distance")
 
@@ -414,29 +418,35 @@ class LSHash(object):
                 d_func = LSHash.hamming_dist
                 binary_hash = np.array([self._hash(self.uniform_planes[0], query_point)]).astype(np.uint64)
 
-                if 'random' in self.storage_config:
-                    print "fetch keys..."
-                    start = time.clock()
-                    self.load_keys(binary_hash, expand_level)
-                    elapsed = (time.clock() - start)
-                    print "time: " + str(elapsed)
+                print "fetch keys..."
+                start = time.clock()
+                (binary_codes, image_ids) = self.load_keys(binary_hash, expand_level)
+                elapsed = (time.clock() - start)
+                print "time: " + str(elapsed)
 
-                binary_codes = self.loaded_keys[0]
                 print binary_codes.shape
 
                 hamming_distances = self.query_with_binary_codes(binary_hash, binary_codes, num_results)
 
-                hamming_candidates = []
-                idx = 0
-                for dist in hamming_distances:
-                    hamming_candidates.append((self.loaded_keys[0][idx], dist))
-                    idx += 1
-                
-                hamming_candidates.sort(key=lambda x: x[1])
-                
-                hamming_candidates = hamming_candidates[:num_results] if num_results else hamming_candidates
-                return self.fetch_extra_data(hamming_candidates)
-                
+                return self.sorting(image_ids, hamming_distances)
+
+
+    def sorting(self, hamming_candidates, hamming_distances, num_results = None):
+       
+        self.benchmark_begin("sorting")
+ 
+        hamming_results = []
+        for idx in range(0, len(hamming_distances)):
+            hamming_results.append((hamming_candidates[idx], hamming_distances[idx]))
+
+        hamming_results.sort(key=lambda x: x[1]) 
+
+        self.benchmark_end("sorting")
+
+        hamming_results = hamming_results[:num_results] if isinstance(num_results, int) else hamming_results
+        
+        return hamming_results
+        
 
     def query_with_binary_codes(self, binary_hash, binary_codes, num_results):
 
@@ -450,17 +460,15 @@ class LSHash(object):
 
         return hamming_distances
         
-        #hamming_candidates = []
-        #idx = 0
-        #for dist in hamming_distances:
-        #    hamming_candidates.append((self.loaded_keys[0][idx], dist))
-        #    idx += 1
-        #
-        #hamming_candidates.sort(key=lambda x: x[1])
-        #
-        #hamming_candidates = hamming_candidates[:num_results] if num_results else hamming_candidates
-        #return self.fetch_extra_data(hamming_candidates)
 
+    def benchmark_begin(self, title):
+        print "start to " + title
+        self.start = time.clock()
+
+    def benchmark_end(self, title):
+        print "end of " + title
+        elapsed = (time.clock() - self.start)
+        print "time: " + str(elapsed)
 
     ### distance functions
 
