@@ -319,7 +319,7 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
 
         np_addresses = numpy.array(addresses).astype(numpy.uint64)
 
-        # suppose we use 32 bit address space that 1 point costs 4 bytes
+        # We have 64 bit address space on GPU that 1 pointer costs 8 bytes
         # todo: do we have better way to figure the size of pointer in python?
         arrays_gpu = drv.mem_alloc(np_addresses.shape[0] * 8)
 
