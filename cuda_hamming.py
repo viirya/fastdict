@@ -278,9 +278,9 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
 
         concate_col = None
         if vlq_mode == 'n':
-            concate_col = numpy.zeros(max_length * 8).astype(numpy.uint8)
+            concate_col = numpy.zeros(max_length * 2 * 8).astype(numpy.uint8)
         else:
-            concate_col = numpy.zeros(max_length).astype(numpy.uint8)
+            concate_col = numpy.zeros(max_length * 2).astype(numpy.uint8)
  
         gpu_alloc_objs = []
         for col_idx in range(0, 64):
@@ -291,7 +291,7 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
                     cur_col_len = len(compressed_columns_vec[bucket_idx][col_idx])
                     numpy.copyto(concate_col[col_len:col_len + cur_col_len], compressed_columns_vec[bucket_idx][col_idx])
                     col_len += cur_col_len
-                    
+
             col_ptr = drv.mem_alloc(col_len)
             drv.memcpy_htod(int(col_ptr), concate_col[0:col_len])
 
