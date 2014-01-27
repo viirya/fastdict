@@ -176,11 +176,17 @@ public:
     }
  
     void batch_append(boost::python::list& keys, boost::python::list& hash_keys, boost::python::list& ids) {
-        for (int i = 0; i < len(keys); i++) {
-            std::vector<uint8_t> bool_key = actual_key(boost::python::extract<uint32_t>(keys[i]));
+        std::vector<std::vector<uint8_t> > bool_keys(len(keys));        
+        for (int i = 0; i < len(keys); i++) {            
+            bool_keys[i] = actual_key(boost::python::extract<uint32_t>(keys[i]));            
+            dict[bool_keys[i]].reserve(len(keys));        
+        }        
+
+        for (int i = 0; i < len(keys); i++) {            
+            std::vector<uint8_t> bool_key = bool_keys[i];
 
             std::pair<uint64_t, IdType> element(boost::python::extract<uint64_t>(hash_keys[i]), boost::python::extract<IdType>(ids[i]));
-            dict[bool_key].insert(dict[bool_key].end(), element);
+            dict[bool_key].insert(dict[bool_key].end(), element);        
         }
     }
  
