@@ -144,10 +144,10 @@ __global__ void vlq_compressed_hamming_dist(uint64_t* query, char** vlq_bit_coun
  
 
         self.compressed_mod = SourceModule("""
-typedef unsigned int uint8_t;
-typedef unsigned long int uint32_t;
-typedef unsigned long long int uint64_t;
-__global__ void compressed_hamming_dist(uint64_t* query, uint64_t** bit_counts, uint64_t* max_length, char** distances)
+typedef unsigned int uint8_t; // sizeof(uint8_t) is 4
+typedef unsigned long int uint32_t; // sizeof(uint32_t) is 8
+typedef unsigned long long int uint64_t; // sizeof(uint64_t) is 8
+__global__ void compressed_hamming_dist(uint64_t* query, uint8_t** bit_counts, uint64_t* max_length, char** distances)
 {
     const uint64_t i = gridDim.x * blockDim.x * blockIdx.y + blockIdx.x * blockDim.x + threadIdx.x;
     
@@ -175,7 +175,7 @@ __global__ void compressed_hamming_dist(uint64_t* query, uint64_t** bit_counts, 
             uint64_t current_binary_index = 0;
         
             while (count_for_bits <= max_length[0]) {
-                count_for_bits += bit_counts[column_index][bit_count_index++];
+                count_for_bits += (uint64_t)bit_counts[column_index][bit_count_index++];
         
                 if ((count_for_bits > max_length[0]) || (current_binary_index > batch_size))
                     break;
@@ -278,7 +278,7 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
 
         concate_col = None
         if vlq_mode == 'n':
-            concate_col = numpy.zeros(max_length * 2 * 8).astype(numpy.uint8)
+            concate_col = numpy.zeros(max_length * 2 * 4).astype(numpy.uint8)
         else:
             concate_col = numpy.zeros(max_length * 2).astype(numpy.uint8)
  
