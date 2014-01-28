@@ -1278,9 +1278,11 @@ BOOST_PYTHON_MODULE(fastdict)
         .def(vector_indexing_suite<std::vector<std::vector<uint32_t> > >())
     ;
 
+    /* duplicate with above "ShorKeyVec"
     class_<std::vector<uint32_t> >("UInt32BitCountVec")
         .def(vector_indexing_suite<std::vector<uint32_t> >())
     ;
+    */
  
     class_<std::vector<std::string> >("StringVec")
         .def(vector_indexing_suite<std::vector<std::string> >())
