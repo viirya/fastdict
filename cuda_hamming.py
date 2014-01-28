@@ -64,7 +64,7 @@ __device__ uint32_t decode_VLQ_base64(char* string, uint32_t* offset) {
     return result;
 }
 
-__global__ void vlq_compressed_hamming_dist(uint64_t* query, char** vlq_bit_counts, uint64_t* max_length, uint64_t* distances)
+__global__ void vlq_compressed_hamming_dist(uint64_t* query, char** vlq_bit_counts, uint64_t* max_length, char** distances)
 {
 
     const uint64_t i = gridDim.x * blockDim.x * blockIdx.y + blockIdx.x * blockDim.x + threadIdx.x;
@@ -130,7 +130,7 @@ __global__ void vlq_compressed_hamming_dist(uint64_t* query, char** vlq_bit_coun
                 xor_r = (xor_r & m2) + ((xor_r >> 2) & m2); 
                 xor_r = (xor_r + (xor_r >> 4)) & m4;        
         
-                distances[i_for_batch + binary_code_index] = (xor_r * h01) >> 56;
+                distances[0][i_for_batch + binary_code_index] = (uint8_t)((xor_r * h01) >> 56);
                 //distances[i_for_batch + binary_code_index] = tmp_binary_codes[binary_code_index];
                 //distances[i_for_batch + binary_code_index] = binary_codes[binary_code_index];
                 //distances[i_for_batch + binary_code_index] = i_for_batch + binary_code_index + 1;
@@ -147,7 +147,7 @@ __global__ void vlq_compressed_hamming_dist(uint64_t* query, char** vlq_bit_coun
 typedef unsigned int uint8_t;
 typedef unsigned long int uint32_t;
 typedef unsigned long long int uint64_t;
-__global__ void compressed_hamming_dist(uint64_t* query, uint64_t** bit_counts, uint64_t* max_length, uint64_t* distances)
+__global__ void compressed_hamming_dist(uint64_t* query, uint64_t** bit_counts, uint64_t* max_length, char** distances)
 {
     const uint64_t i = gridDim.x * blockDim.x * blockIdx.y + blockIdx.x * blockDim.x + threadIdx.x;
     
@@ -211,7 +211,7 @@ __global__ void compressed_hamming_dist(uint64_t* query, uint64_t** bit_counts, 
                 xor_r = (xor_r & m2) + ((xor_r >> 2) & m2); 
                 xor_r = (xor_r + (xor_r >> 4)) & m4;        
         
-                distances[i_for_batch + binary_code_index] = (xor_r * h01) >> 56;
+                distances[0][i_for_batch + binary_code_index] = (uint8_t)((xor_r * h01) >> 56);
                 //distances[i_for_batch + binary_code_index] = tmp_binary_codes[binary_code_index];
                 //distances[i_for_batch + binary_code_index] = binary_codes[binary_code_index];
                 //distances[i_for_batch + binary_code_index] = i_for_batch + binary_code_index + 1;
@@ -325,7 +325,16 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
 
         drv.memcpy_htod(arrays_gpu, np_addresses)
 
-        distances = numpy.zeros(binary_code_length).astype(numpy.uint64)
+        # distances
+
+        distances = numpy.zeros(binary_code_length).astype(numpy.uint8)
+        distances_addr = drv.to_device(distances)
+
+        distances_gpu = drv.mem_alloc(1 * 8)
+        distances_address = numpy.array([int(distances_addr)]).astype(numpy.uint64)
+
+        drv.memcpy_htod(distances_gpu, distances_address)
+
 
         length = numpy.array([binary_code_length]).astype(numpy.uint64)
  
@@ -341,15 +350,17 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         if vlq_mode == 'n':
             print "non VLQ base64 cuda uncompression and hamming distance calculation"
             self.compressed_hamming_dist(
-                drv.In(vec_a), arrays_gpu, drv.In(length), drv.Out(distances),
+                drv.In(vec_a), arrays_gpu, drv.In(length), distances_gpu,
                 block = self.block, grid = custom_grid)
         else:
             print "VLQ base64 cuda uncompression and hamming distance calculation"
             self.vlq_compressed_hamming_dist(
-                drv.In(vec_a), arrays_gpu, drv.In(length), drv.Out(distances),
+                drv.In(vec_a), arrays_gpu, drv.In(length), distances_gpu,
                 block = self.block, grid = custom_grid)
         
         self.benchmark_end('cudaing')
+
+        drv.memcpy_dtoh(distances, distances_addr)
 
         print distances
         #count = 0
