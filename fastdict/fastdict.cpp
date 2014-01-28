@@ -528,23 +528,23 @@ public:
         std::pair<std::vector<uint8_t>, std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > > me;
 
         BOOST_FOREACH(me, column_dict) {
-            std::vector<uint64_t*> columns;
+            std::vector<BitCountType*> columns;
             std::vector<uint32_t> columns_length;
 
             std::vector<BitCountType> column;
             BOOST_FOREACH(column, me.second.first) {               
-                uint64_t* column_as_array =  new uint64_t[column.size()];
+                BitCountType* column_as_array =  new BitCountType[column.size()];
 
                 int ele_index = 0;
                 BOOST_FOREACH(BitCountType ele, column) {
-                    column_as_array[ele_index++] = (uint64_t)ele;
+                    column_as_array[ele_index++] = ele;
                 }
                 columns.insert(columns.end(), column_as_array);
                 columns_length.insert(columns_length.end(), column.size());
             }
 
-            std::pair<std::vector<uint64_t*>, std::vector<IdType> > nested_pair(columns, me.second.second);
-            std::pair<std::vector<uint32_t>, std::pair<std::vector<uint64_t*>, std::vector<IdType> > > pair(columns_length, nested_pair);
+            std::pair<std::vector<BitCountType*>, std::vector<IdType> > nested_pair(columns, me.second.second);
+            std::pair<std::vector<uint32_t>, std::pair<std::vector<BitCountType*>, std::vector<IdType> > > pair(columns_length, nested_pair);
             runtime_dict[me.first] = pair;
         }
         column_dict.clear();
@@ -588,7 +588,7 @@ public:
 
         if (runtime_dict.count(bool_key) > 0) {
 
-                uint64_t* column;
+                BitCountType* column;
                 int column_index = 0;
                 BOOST_FOREACH(column, runtime_dict[bool_key].second.first) {               
 
@@ -601,7 +601,7 @@ public:
                     }
                     */
 
-                    PyObject* buffer_obj = PyBuffer_FromMemory ((void*)column, runtime_dict[bool_key].first[column_index++] * 8);
+                    PyObject* buffer_obj = PyBuffer_FromMemory ((void*)column, runtime_dict[bool_key].first[column_index++] * sizeof(BitCountType));
                     boost::python::incref(buffer_obj);
 
                     buffers.insert(buffers.end(), buffer_obj);
@@ -1019,7 +1019,7 @@ public:
 
     std::map<std::vector<uint8_t>, std::pair<std::vector<std::string>, std::vector<IdType> > > column_vlq_dict;
  
-    std::map<std::vector<uint8_t>, std::pair<std::vector<uint32_t>, std::pair<std::vector<uint64_t*>, std::vector<IdType> > > > runtime_dict;
+    std::map<std::vector<uint8_t>, std::pair<std::vector<uint32_t>, std::pair<std::vector<BitCountType*>, std::vector<IdType> > > > runtime_dict;
 
     std::map<std::vector<uint8_t>, std::pair<std::vector<uint32_t>, std::pair<std::vector<char*>, std::vector<IdType> > > > runtime_vlq_dict;
  
