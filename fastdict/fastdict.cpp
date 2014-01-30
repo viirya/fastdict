@@ -177,9 +177,15 @@ public:
  
     void batch_append(boost::python::list& keys, boost::python::list& hash_keys, boost::python::list& ids) {
         std::vector<std::vector<uint8_t> > bool_keys(len(keys));        
+        int reserve_size = len(keys) > 5000000 ? 5000000 : len(keys);
         for (int i = 0; i < len(keys); i++) {            
             bool_keys[i] = actual_key(boost::python::extract<uint32_t>(keys[i]));            
-            dict[bool_keys[i]].reserve(len(keys));        
+ 
+            // reserve vector space can speed up batch insert
+            // however, when insert too many elements such as 10 millions
+            // next line could cause out of memory
+            // so it is needed to limit the reserve size
+            dict[bool_keys[i]].reserve(reserve_size);        
         }        
 
         for (int i = 0; i < len(keys); i++) {            
@@ -187,6 +193,27 @@ public:
 
             std::pair<uint64_t, IdType> element(boost::python::extract<uint64_t>(hash_keys[i]), boost::python::extract<IdType>(ids[i]));
             dict[bool_key].insert(dict[bool_key].end(), element);        
+        }
+    }
+ 
+    void fast_batch_append(boost::python::list& keys, boost::python::list& hash_keys, boost::python::list& ids) {
+        std::map<std::vector<uint8_t>, std::vector<std::pair<uint64_t, IdType> > > all_actual_keys;
+        for (int i = 0; i < len(keys); i++) {            
+
+            std::vector<uint8_t> bool_key = actual_key(boost::python::extract<uint32_t>(keys[i]));
+            std::pair<uint64_t, IdType> element(boost::python::extract<uint64_t>(hash_keys[i]), boost::python::extract<IdType>(ids[i]));
+
+            all_actual_keys[bool_key].insert(all_actual_keys[bool_key].end(), element);
+        }        
+
+        typename std::map<std::vector<uint8_t>, std::vector<std::pair<uint64_t, IdType> > >::iterator it;
+        for (it = all_actual_keys.begin(); it != all_actual_keys.end(); ++it) {
+            dict[it->first].reserve(it->second.size());
+
+            std::pair<uint64_t, IdType> element;        
+            BOOST_FOREACH(element, it->second) {
+                dict[it->first].insert(dict[it->first].end(), element);
+            }
         }
     }
  
@@ -1096,6 +1123,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("set", &FastDict<std::string>::set)
         .def("append", &FastDict<std::string>::append)
         .def("batch_append", &FastDict<std::string>::batch_append)
+        .def("fast_batch_append", &FastDict<std::string>::fast_batch_append)
         .def("batch_iter_append", &FastDict<std::string>::batch_iter_append)
         .def("size", &FastDict<std::string>::size)
         .def("keys", &FastDict<std::string>::keys)
@@ -1129,6 +1157,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("set", &FastDict<uint32_t>::set)
         .def("append", &FastDict<uint32_t>::append)
         .def("batch_append", &FastDict<uint32_t>::batch_append)
+        .def("fast_batch_append", &FastDict<uint32_t>::fast_batch_append)
         .def("batch_iter_append", &FastDict<uint32_t>::batch_iter_append)
         .def("size", &FastDict<uint32_t>::size)
         .def("keys", &FastDict<uint32_t>::keys)
@@ -1157,6 +1186,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("set", &FastCompressDict<uint8_t, uint32_t>::set)
         .def("append", &FastCompressDict<uint8_t, uint32_t>::append)
         .def("batch_append", &FastCompressDict<uint8_t, uint32_t>::batch_append)
+        .def("fast_batch_append", &FastCompressDict<uint8_t, uint32_t>::fast_batch_append)
         .def("batch_iter_append", &FastCompressDict<uint8_t, uint32_t>::batch_iter_append)
         .def("size", &FastCompressDict<uint8_t, uint32_t>::size)
         .def("keys", &FastCompressDict<uint8_t, uint32_t>::keys)
@@ -1239,6 +1269,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("set", &FastCompressDict<uint32_t, uint32_t>::set)
         .def("append", &FastCompressDict<uint32_t, uint32_t>::append)
         .def("batch_append", &FastCompressDict<uint32_t, uint32_t>::batch_append)
+        .def("fast_batch_append", &FastCompressDict<uint32_t, uint32_t>::fast_batch_append)
         .def("batch_iter_append", &FastCompressDict<uint32_t, uint32_t>::batch_iter_append)
         .def("size", &FastCompressDict<uint32_t, uint32_t>::size)
         .def("keys", &FastCompressDict<uint32_t, uint32_t>::keys)
