@@ -66,6 +66,7 @@ Parameters:
 * -g: 'y' for GPU-based uncompression. 'n' for CPU-based.
 * -l: 'y' for VLQ base64 mode. default is 'n'
 * -b: the level of bucket expansion
+* -t: the type of FastDict component. It can be 'int32', 'int8' or 'string'. default is 'int32'
 
 
 

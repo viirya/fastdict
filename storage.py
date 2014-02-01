@@ -96,9 +96,16 @@ class InMemoryStorage(BaseStorage):
 class RandomInMemoryStorage(InMemoryStorage):
     def __init__(self, config):
         self.name = 'random'
-        self.storage = fastdict.FastCompressUInt32IntDict(config['r'])
 
-        self.load_dict = fastdict.FastCompressUInt32IntDict(config['r'])
+        if config['t'] == 'string':
+            self.storage = fastdict.FastCompressUInt32StringDict(config['r'])
+            self.load_dict = fastdict.FastCompressUInt32StringDict(config['r'])
+        elif config['t'] == 'int8':
+            self.storage = fastdict.FastCompressUInt32Int8Dict(config['r'])
+            self.load_dict = fastdict.FastCompressUInt32Int8Dict(config['r'])
+        elif config['t'] == 'int32':
+            self.storage = fastdict.FastCompressUInt32IntDict(config['r'])
+            self.load_dict = fastdict.FastCompressUInt32IntDict(config['r'])
 
         self.init_key_dimension(config['r'], config['dim'], config['random'])
         self.init_bases(config['r'])
@@ -173,10 +180,20 @@ class RandomInMemoryStorage(InMemoryStorage):
         for key in keys:
             actual_keys.append(int(self.actual_key(key)))
             vals.append(val)
-            val += 1
+            if self.config['t'] == 'int8':
+                if val < 255:
+                    val += 1
+            else:
+                val += 1
+
+        if self.config['t'] == 'string':
+            encodeds = self.storage.NumberIdsToVLQ_base64(vals)
+            vals = []
+            for encoded in encodeds:
+                vals.append(encoded)
 
         self.benchmark_begin('batch insert to fastdict')
-        self.storage.batch_append(actual_keys, keys, vals) 
+        self.storage.fast_batch_append(actual_keys, keys, vals) 
         self.benchmark_end('batch insert to fastdict')   
 
 
@@ -254,15 +271,32 @@ class RandomInMemoryStorage(InMemoryStorage):
             self.inited_runtime_VLQ_base64 = True
 
     def save(self, filename):
-        fastdict.save_compress_uint32_int(filename, self.storage)
+        if self.config['t'] == 'string':
+            fastdict.save_compress_uint32_string(filename, self.storage)
+        elif self.config['t'] == 'int8':
+            fastdict.save_compress_uint32_int8(filename, self.storage)
+        elif self.config['t'] == 'int32':
+            fastdict.save_compress_uint32_int(filename, self.storage)
 
     def load(self, filename):
         if self.storage.size() > 0:
-            fastdict.load_compress_uint32_int(filename, self.load_dict)
+            if self.config['t'] == 'string':       
+                fastdict.load_compress_uint32_string(filename, self.load_dict) 
+            elif self.config['t'] == 'int8':
+                fastdict.load_compress_uint32_int8(filename, self.load_dict)
+            elif self.config['t'] == 'int32':
+                fastdict.load_compress_uint32_int(filename, self.load_dict)
+
             self.storage.merge(self.load_dict) 
             self.load_dict.clear()
         else:
-            fastdict.load_compress_uint32_int(filename, self.storage)
+            if self.config['t'] == 'string':        
+                fastdict.load_compress_uint32_string(filename, self.storage)
+            elif self.config['t'] == 'int8':
+                fastdict.load_compress_uint32_int8(filename, self.storage)
+            elif self.config['t'] == 'int32':
+                fastdict.load_compress_uint32_int(filename, self.storage)
+
             key_dimensions = []
             self.storage.get_keydimensions(key_dimensions)
             self.key_dimensions = np.array(key_dimensions)
