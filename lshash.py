@@ -14,8 +14,10 @@ import pickle
 
 from storage import storage
 
-from cuda_hamming import CudaHamming
-from cuda_indexing import CudaIndexing
+#from cuda_hamming import CudaHamming
+#from cuda_indexing import CudaIndexing
+
+from cuda_hamming_client import cudaclient
 
 try:
     from bitarray import bitarray
@@ -51,7 +53,7 @@ class LSHash(object):
         (optional) Whether to overwrite the matrices file if it already exist
     """
 
-    def __init__(self, hash_size, input_dim, random_sampling = True, dict_type = 'int32', random_dims = 32, num_hashtables=1,
+    def __init__(self, hash_size, input_dim, random_sampling = True, dict_type = 'int32', cuda_client_type = 'local', random_dims = 32, num_hashtables=1,
                  storage_config=None, matrices_filename=None, overwrite=False):
 
         self.hash_size = hash_size
@@ -75,9 +77,10 @@ class LSHash(object):
 
         self.loaded_keys = None
 
-        self.cuda_hamming = CudaHamming()
+        #self.cuda_hamming = CudaHamming()
+        self.cuda_hamming = cudaclient(cuda_client_type)
 
-        self.cuda_indexing = CudaIndexing()
+        #self.cuda_indexing = CudaIndexing()
 
     def _init_uniform_planes(self):
         """ Initialize uniform planes used to calculate the hashes
@@ -226,6 +229,10 @@ class LSHash(object):
             table.append_val(self._hash(self.uniform_planes[i], input_point),
                              value)
     def cuda_index(self, input_points, extra_data = None):
+
+        from cuda_indexing import CudaIndexing
+
+        self.cuda_indexing = CudaIndexing()
 
         # we have only one table
         indexed_data = self.cuda_indexing.batch_indexing(self.uniform_planes[0], input_points)
