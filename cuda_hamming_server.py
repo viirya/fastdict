@@ -3,6 +3,7 @@ import array
 import time
 import math
 import argparse
+import conn
 
 import socket
 
@@ -38,12 +39,66 @@ def loop(args):
         if data == 'cuda_hamming_dist_in_compressed_domain':
             print "call cuda_hamming_dist_in_compressed_domain"
             call_cuda_hamming_dist_in_compressed_domain(client)
+        elif data == 'multi_iteration':
+            print "call multi_iteration"
+            call_multi_iteration(client)
         else:
             print data
 
 
         client.close()
 
+def call_multi_iteration(client):
+ 
+    vec_a = None # the query
+    binary_codes = buffer('') # binary codes to match
+ 
+    if client.sendall('next') == None:
+        length = client.recv(1024)
+        if not length: raise ValueError('Socket Error')
+
+        print 'length: ', int(length)
+
+        if client.sendall('next') == None:
+
+            # receive query
+
+            vec_a = client.recv(int(length))
+
+            if not vec_a: raise ValueError('Socket Error')
+
+            print len(vec_a)
+            vec_a = numpy.frombuffer(vec_a, dtype = numpy.dtype(numpy.uint64))
+            
+            if client.sendall('next') == None:
+
+                binary_codes = conn.recv_long_vector(client)
+                    
+            else:
+                raise ValueError('Socket Error')
+
+    else:
+        raise ValueError('Socket Error')
+
+    print vec_a.shape
+    print binary_codes.shape
+
+    data = client.recv(1024)
+    if data != 'ready':
+        print data
+        raise ValueError('Socket Error')
+
+    # hamming_distances: uint8 numpy array
+    hamming_distances = cuda_hamming_obj.multi_iteration(vec_a, binary_codes)
+    hamming_distances = hamming_distances.astype(numpy.uint8)
+
+    print "results:"
+    print hamming_distances
+    print hamming_distances.shape
+
+    conn.send_long_vector(client, hamming_distances, 1)
+    
+ 
 def call_cuda_hamming_dist_in_compressed_domain(client):
 
     vec_a = None
@@ -90,23 +145,8 @@ def call_cuda_hamming_dist_in_compressed_domain(client):
                     
                             columns = []
                             while cols_length > 0:
-                                length = client.recv(1024)
-                                if not length: raise ValueError('Socket Error')
-                                
-                                print "length: ", length
-                            
-                                if client.sendall('next') == None:
-                                
-                                    column = client.recv(int(length))
-                                    if not column: raise ValueError('Socket Error')
-                                    columns.append(buffer(column))
-                                    
-                                    if client.sendall('next') != None:
-                                        raise ValueError('Socket Error')
-                                    
-                                    cols_length -= 1
-                                else:
-                                    raise ValueError('Socket Error')
+                                columns.append(buffer(conn.recv_long_vector(client, None)))
+                                cols_length -= 1
                             
                             columns_vector.append(columns)
                             
@@ -161,16 +201,9 @@ def call_cuda_hamming_dist_in_compressed_domain(client):
     print "results:"
     print hamming_distances
 
-    if client.sendall(str(hamming_distances.shape[0])) == None:
-        if client.recv(1024) == 'next':
-            if client.sendall(hamming_distances) == None:    
-                return 
-            else:
-                raise ValueError('Socket Error')
-        else:
-            raise ValueError('Socket Error')
-    else:
-        raise ValueError('Socket Error')
+    hamming_distances = hamming_distances.astype(numpy.uint8)
+
+    conn.send_long_vector(client, hamming_distances, 1)
 
 
 if __name__ == "__main__":

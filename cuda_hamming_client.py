@@ -3,6 +3,7 @@ import array
 import time
 import math
 import argparse
+import conn
 
 import socket
 
@@ -29,8 +30,43 @@ class CudaHammingNetClient(object):
     # two numpy array of dtype uint64
     def multi_iteration(self, vec_a, vec_b):
 
-        print "multi_iteration"
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((self.host, self.port))
 
+        if s.sendall('multi_iteration') == None:
+            data = s.recv(1024)
+            if data != 'next': raise ValueError('Socket Error')
+
+            if s.sendall(str(vec_a.shape[0] * 8)) == None:
+                data = s.recv(1024)
+                if data != 'next': raise ValueError('Socket Error')
+
+ 
+                if s.sendall(vec_a) == None:
+                    data = s.recv(1024)
+                    if data != 'next': raise ValueError('Socket Error')
+                    conn.send_long_vector(s, vec_b)
+                else:
+                    raise ValueError('Socket Error') 
+            else:
+                raise ValueError('Socket Error') 
+        else:
+            raise ValueError('Socket Error') 
+                
+        print "ready to receive hamming results." 
+
+        # receive results
+        if s.sendall('ready') == None:
+
+            distances = conn.recv_long_vector(s, numpy.uint8)
+            print distances
+            print distances.shape
+            return distances
+
+        else:
+            raise ValueError('Socket Error')
+            
+ 
     # vec_a: numpy array of dtype uint64
     # compressed_columns_vec: array of buffers
     def cuda_hamming_dist_in_compressed_domain(self, vec_a, compressed_columns_vec, image_ids, vlq_mode):
@@ -70,18 +106,12 @@ class CudaHammingNetClient(object):
                             raise ValueError('Socket Error') 
  
                         for column in columns:
-                            if s.sendall(str(len(column) * 8)) == None:
-                                data = s.recv(1024)
-                                if data != 'next': raise ValueError('Socket Error')
+
+                            if vlq_mode == 'y':
+                                conn.send_long_vector(s, numpy.frombuffer(column, dtype = numpy.uint8), 1)
                             else:
-                                raise ValueError('Socket Error') 
+                                conn.send_long_vector(s, numpy.frombuffer(column, dtype = numpy.uint32), 4)
  
-                            if s.sendall(column) == None:
-                                data = s.recv(1024)
-                                if data != 'next': raise ValueError('Socket Error')
-                            else:
-                                raise ValueError('Socket Error')
-                
                     if s.sendall("done") == None:
                         data = s.recv(1024)
                         if data != 'ok': raise ValueError('Socket Error')
@@ -105,20 +135,11 @@ class CudaHammingNetClient(object):
 
         # receive results
         if s.sendall('ready') == None:
-            results_length = s.recv(1024)
-            if not results_length: raise ValueError('Socket Error')
 
-            results_length = int(results_length)
-
-            if s.sendall('next') == None:
-                distances = s.recv(results_length)
-                if not distances: raise ValueError('Socket Error')
-                s.close()
-
-                distances = numpy.frombuffer(distances, dtype = numpy.dtype(numpy.uint8))
-                return distances
-            else:
-                raise ValueError('Socket Error')
+            distances = conn.recv_long_vector(s, numpy.uint8)
+            print distances
+            print distances.shape
+            return distances
 
         else:
             raise ValueError('Socket Error')
