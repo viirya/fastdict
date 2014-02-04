@@ -101,6 +101,7 @@ def main():
     parser.add_argument('-b', default = '1', help = 'Expanding level of search buckets.')
     parser.add_argument('-t', default = 'int32', help = 'FastDict type (int32, int8, string).')
     parser.add_argument('-u', default = 'local', help = 'CUDA client type (local, net).')
+    parser.add_argument('-host', default = 'localhost', help = 'CUDA server address.')
  
 
     args = parser.parse_args()
@@ -114,7 +115,7 @@ def main():
     if args.q == 'y':
         random_sampling = False
 
-    lsh = LSHash(64, d, random_sampling, args.t, args.u, random_dims, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
+    lsh = LSHash(64, d, random_sampling, args.t, args.u, args.host, random_dims, 1, storage_config = args.s, matrices_filename = 'project_plane.npz')
     np_feature_vecs = load_features(args.f, args.v, nuse, d, lsh, args.e, off, args.i)
 
     if args.c == 'y':

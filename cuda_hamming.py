@@ -380,10 +380,14 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
 
         sub_vec_bs = numpy.split(vec_b, sections)
 
+        self.benchmark_begin('cudaing')
+
         dest = numpy.array([])
         for sub_vec in sub_vec_bs:
             sub_dest = self.cuda_hamming_dist(vec_a, sub_vec)
             dest = numpy.concatenate((dest, sub_dest))
+
+        self.benchmark_end('cudaing')
 
         return dest
             

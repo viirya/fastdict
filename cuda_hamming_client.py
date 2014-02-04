@@ -15,7 +15,7 @@ def cudaclient(client_type = 'local', options = {}):
     elif client_type == 'net':
         if options == {}:
             options = {'host': 'localhost', 'port': 8080}
-        return CudaHammingNetClient()
+        return CudaHammingNetClient(options)
     else:
         raise ValueError("CUDA Client must be local or net type.")
 
@@ -53,7 +53,7 @@ class CudaHammingNetClient(object):
         else:
             raise ValueError('Socket Error') 
                 
-        print "ready to receive hamming results." 
+        #print "ready to receive hamming results." 
 
         # receive results
         if s.sendall('ready') == None:
@@ -87,6 +87,8 @@ class CudaHammingNetClient(object):
                     data = s.recv(1024)
                     if data != 'next': raise ValueError('Socket Error')
 
+                    print "compressed_columns_vec len: ", len(compressed_columns_vec)
+
                     # tell server how many columns_vector to send
                     if s.sendall(str(len(compressed_columns_vec))) == None:
                         data = s.recv(1024)
@@ -95,7 +97,7 @@ class CudaHammingNetClient(object):
                         raise ValueError('Socket Error') 
                 
                     for columns in compressed_columns_vec:   
-                        print 'columns leg: ', len(columns)
+                        #print 'columns leg: ', len(columns)
 
                         # how many columns in a columns vector
                         # should be 64 columns for 64 bits

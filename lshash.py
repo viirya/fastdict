@@ -53,8 +53,7 @@ class LSHash(object):
         (optional) Whether to overwrite the matrices file if it already exist
     """
 
-    def __init__(self, hash_size, input_dim, random_sampling = True, dict_type = 'int32', cuda_client_type = 'local', random_dims = 32, num_hashtables=1,
-                 storage_config=None, matrices_filename=None, overwrite=False):
+    def __init__(self, hash_size, input_dim, random_sampling = True, dict_type = 'int32', cuda_client_type = 'local', cuda_server = 'locahost', random_dims = 32, num_hashtables=1, storage_config=None, matrices_filename=None, overwrite=False):
 
         self.hash_size = hash_size
         self.input_dim = input_dim
@@ -78,7 +77,8 @@ class LSHash(object):
         self.loaded_keys = None
 
         #self.cuda_hamming = CudaHamming()
-        self.cuda_hamming = cudaclient(cuda_client_type)
+        cudaclient_options = {'host': cuda_server, 'port': 8080}
+        self.cuda_hamming = cudaclient(cuda_client_type, cudaclient_options)
 
         #self.cuda_indexing = CudaIndexing()
 
