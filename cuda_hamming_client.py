@@ -61,7 +61,7 @@ class CudaHammingNetClient(object):
             distances = conn.recv_long_vector(s, numpy.uint8)
             print distances
             print distances.shape
-            return distances
+            return (distances, 0)
 
         else:
             raise ValueError('Socket Error')
@@ -141,7 +141,7 @@ class CudaHammingNetClient(object):
             distances = conn.recv_long_vector(s, numpy.uint8)
             print distances
             print distances.shape
-            return distances
+            return (distances, 0)
 
         else:
             raise ValueError('Socket Error')
@@ -153,7 +153,7 @@ class CudaHammingNetClient(object):
         s.connect((self.host, self.port))
 
         for data in datas:
-            s.send(data)
+            s.send(buffer(data))
 
         r_data = s.recv(1024)
         s.close()
@@ -162,7 +162,7 @@ class CudaHammingNetClient(object):
 
 if __name__ == "__main__":
 
-    client = cudaclient('net')
-    client.send_query([buffer('test')])
-    client.cuda_hamming_dist_in_compressed_domain(numpy.array([123]), [[numpy.array([123]), numpy.array([456])]], [], True)
+    client = cudaclient('net', {'host': 'localhost', 'port': 8080})
+    client.send_query(['test'])
+    #client.cuda_hamming_dist_in_compressed_domain(numpy.array([123]), [[numpy.array([123]), numpy.array([456])]], [], True)
 

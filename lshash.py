@@ -389,12 +389,19 @@ class LSHash(object):
                         print "cuda processing..."
                         start = time.clock()
                         
-                        hamming_distances = self.cuda_hamming.cuda_hamming_dist_in_compressed_domain(binary_hash, cols_vector, image_ids, vlq_mode)
+                        try:
+                            hamming_distances = self.cuda_hamming.cuda_hamming_dist_in_compressed_domain(binary_hash, cols_vector, image_ids, vlq_mode)
                         
-                        elapsed = (time.clock() - start)
-                        print "time: " + str(elapsed)
+                            elapsed = (time.clock() - start)
+                            print "time: " + str(elapsed)
 
-                        return self.sorting(image_ids, hamming_distances)
+                            hamming_distances = hamming_distances[0]
+
+                            return self.sorting(image_ids, hamming_distances)
+
+                        except:
+                            print "Exception found in computing hamming distance."
+                            return []
 
 
     def query(self, query_point, num_results=None, expand_level = 1, distance_func=None):
@@ -439,6 +446,8 @@ class LSHash(object):
 
 
     def sorting(self, hamming_candidates, hamming_distances, num_results = None):
+
+        if hamming_distances == []: return []
        
         self.benchmark_begin("sorting")
  
@@ -459,13 +468,19 @@ class LSHash(object):
 
         print "cuda processing..."
         start = time.clock()
+       
+        try: 
+            hamming_distances = self.cuda_hamming.multi_iteration(binary_hash, binary_codes)
+            hamming_distances = hamming_distances[0]
         
-        hamming_distances = self.cuda_hamming.multi_iteration(binary_hash, binary_codes)
-        
-        elapsed = (time.clock() - start)
-        print "time: " + str(elapsed)
+            elapsed = (time.clock() - start)
+            print "time: " + str(elapsed)
 
-        return hamming_distances
+            return hamming_distances
+
+        except:
+            print "Exception found in computing hamming distances."
+            return []
         
 
     def benchmark_begin(self, title):

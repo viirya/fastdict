@@ -4,12 +4,17 @@ import time
 import math
 import argparse
 import conn
+import sys
 
 import socket
 
 from cuda_hamming import CudaHamming
 
 cuda_hamming_obj = CudaHamming()
+
+logging_info = {}
+
+s = None
 
 def init():
     parser = argparse.ArgumentParser(description = 'The CUDA Hamming Distance Server')
@@ -20,33 +25,76 @@ def init():
     args.p = int(args.p)
 
     return args
+
+def log_info(hamming_distances):
+
+    cuda_time = hamming_distances[1]
+
+    log(hamming_distances[0].shape[0])
+    log('time: ' + str(cuda_time))
+    log('max: ' + str(numpy.amax(hamming_distances[0])))
+    log('min: ' + str(numpy.amin(hamming_distances[0])))
+    log('mean: ' + str(numpy.mean(hamming_distances[0])))
+
+    if not 'cuda_time' in logging_info:
+        logging_info['cuda_time'] = cuda_time
+        logging_info['cuda_run'] = 1
+    else:
+        logging_info['cuda_time'] += cuda_time
+        logging_info['cuda_run'] += 1
+
+
+def log(msg):
+
+    try:
+        sys.stderr.write(str(msg) + "\n")
+    except:
+        1
  
 def loop(args):
  
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind((args.b, args.p))
     s.listen(1)
 
     print "Socket inited."
+ 
 
-    while 1:
-        (client, address) = s.accept()
-        print "Connected by: ", address
+    try: 
+        while 1:
+            (client, address) = s.accept()
+            print "Connected by: ", address
+        
+            data = client.recv(1024)
+            if not data:
+                client.close()
+                continue
+        
+            try:
+                if data == 'cuda_hamming_dist_in_compressed_domain':
+                    print "call cuda_hamming_dist_in_compressed_domain"
+                    call_cuda_hamming_dist_in_compressed_domain(client)
+                elif data == 'multi_iteration':
+                    print "call multi_iteration"
+                    call_multi_iteration(client)
+                else:
+                    log(data)
+                    print data
+                    
+            except:
+                print "Exception found. Close connection."
+        
+            client.close()
 
-        data = client.recv(1024)
-        if not data: break
+    except (KeyboardInterrupt, SystemExit):
+        for key in logging_info:
+            log(key + ': ' + str(logging_info[key]))
 
-        if data == 'cuda_hamming_dist_in_compressed_domain':
-            print "call cuda_hamming_dist_in_compressed_domain"
-            call_cuda_hamming_dist_in_compressed_domain(client)
-        elif data == 'multi_iteration':
-            print "call multi_iteration"
-            call_multi_iteration(client)
-        else:
-            print data
-
-
-        client.close()
+        if s != None:
+            print "Closing socket."
+            s.shutdown(socket.SHUT_RDWR)
+            s.close()
 
 def call_multi_iteration(client):
  
@@ -80,8 +128,6 @@ def call_multi_iteration(client):
     else:
         raise ValueError('Socket Error')
 
-    #print vec_a.shape
-    #print binary_codes.shape
 
     data = client.recv(1024)
     if data != 'ready':
@@ -90,11 +136,10 @@ def call_multi_iteration(client):
 
     # hamming_distances: uint8 numpy array
     hamming_distances = cuda_hamming_obj.multi_iteration(vec_a, binary_codes)
-    hamming_distances = hamming_distances.astype(numpy.uint8)
 
-    #print "results:"
-    #print hamming_distances
-    #print hamming_distances.shape
+    log_info(hamming_distances)
+
+    hamming_distances = hamming_distances[0].astype(numpy.uint8)
 
     conn.send_long_vector(client, hamming_distances, 1)
     
@@ -191,18 +236,12 @@ def call_cuda_hamming_dist_in_compressed_domain(client):
     if client.recv(1024) != 'ready':
         raise ValueError('Socket Error')
 
-    #print vec_a
-    #print columns_vector
-    #print vlq_mode
-
     # hamming_distances: uint8 numpy array
     hamming_distances = cuda_hamming_obj.cuda_hamming_dist_in_compressed_domain(vec_a, columns_vector, image_ids, vlq_mode)
 
-    #print "results:"
-    #print hamming_distances
-    #print hamming_distances.shape
-
-    hamming_distances = hamming_distances.astype(numpy.uint8)
+    log_info(hamming_distances)
+ 
+    hamming_distances = hamming_distances[0].astype(numpy.uint8)
 
     conn.send_long_vector(client, hamming_distances, 1)
 
@@ -211,5 +250,3 @@ if __name__ == "__main__":
     args = init()
     loop(args)
 
- 
-    

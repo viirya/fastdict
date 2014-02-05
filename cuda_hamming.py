@@ -274,6 +274,8 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         elapsed = (time.clock() - self.start)
         print "time: " + str(elapsed)
 
+        return elapsed
+
     def alloc_device_memory_for_cols(self, compressed_columns_vec, vlq_mode, max_length):
 
         concate_col = None
@@ -358,7 +360,7 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
                 drv.In(vec_a), arrays_gpu, drv.In(length), distances_gpu,
                 block = self.block, grid = custom_grid)
         
-        self.benchmark_end('cudaing')
+        cuda_time = self.benchmark_end('cudaing')
 
         drv.memcpy_dtoh(distances, distances_addr)
 
@@ -369,7 +371,7 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
         #    count += 1
         print distances.shape
 
-        return distances
+        return (distances, cuda_time)
 
     def multi_iteration(self, vec_a, vec_b):
 
@@ -387,9 +389,9 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
             sub_dest = self.cuda_hamming_dist(vec_a, sub_vec)
             dest = numpy.concatenate((dest, sub_dest))
 
-        self.benchmark_end('cudaing')
+        cuda_time = self.benchmark_end('cudaing')
 
-        return dest
+        return (dest, cuda_time)
             
     def cuda_hamming_dist(self, vec_a, vec_b):
 
