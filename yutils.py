@@ -40,6 +40,7 @@ def vecfile_stats (fname, d, fmt):
 
     if fmt=='fvecs':     vecsize = 4*d+4
     elif fmt=='bvecs':   vecsize = d+4
+    elif fmt=='ivecs':  vecsize = 4*d+4
     elif fmt=='rawf':    vecsize = 4*d
     elif fmt=='rawb':    vecsize = d
     elif fmt=='siftgeo': vecsize = 168
@@ -69,6 +70,10 @@ def load_vectors_fmt(fname,fmt,d,nuse=None,off=0,verbose=True):
     elif fmt=='bvecs': 
         v = yael.bvec (nuse * long(d))
         n = yael.bvecs_fread (f, v, nuse, d)
+ 
+    elif fmt=='ivecs': 
+        v = yael.ivec (nuse * long(d))
+        n = yael.ivecs_fread (f, v, nuse, d)
 
     elif fmt=='rawf':
         v = yael.fvec (nuse * long(d))
