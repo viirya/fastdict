@@ -10,7 +10,7 @@ import argparse
 
 from lshash import LSHash
 
-def cal_recall(retrived, ground_truth, query_idx, topN = 100, topGT = 1):
+def cal_recall(retrived, ground_truth, query_idx, topN = 100, topGT = 10):
 
     results = []
     for result in retrived[0:topN]:
