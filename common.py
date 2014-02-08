@@ -27,7 +27,7 @@ def cal_recall(retrived, ground_truth, query_idx, topN = 100, topGT = 10):
         ground_t = ground_truth[query_idx][ground_t_idx]
         found = numpy.where(results == ground_t)
         if len(found[0]) > 0:
-            founds += 1
+            founds = 1
 
     print "Found: ", founds
     return founds
@@ -136,6 +136,8 @@ def parse_parameters():
     parser.add_argument('-title', default = 'Run experiments', help = 'Experiment title.')
     parser.add_argument('-gt', help = 'Ground Truth file.')
     parser.add_argument('-gtf', default = 'ivecs', help = 'Ground Truth file format.')
+    parser.add_argument('-b_begin', default = '-1', help = 'The beginning of expanding level.')
+    parser.add_argument('-b_end', default = '-1', help = 'The ending of expanding level.')
  
 
     args = parser.parse_args()

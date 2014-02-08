@@ -38,7 +38,7 @@ def log_info(hamming_distances):
 
     nears = numpy.where(hamming_distances[0] <= 10)
     nears = len(nears[0])
-    log('< 10 nears: ' + str(nears))
+    log('<= 10 nears: ' + str(nears))
 
     if not 'cuda_time' in logging_info:
         logging_info['cuda_time'] = cuda_time
@@ -49,11 +49,17 @@ def log_info(hamming_distances):
         logging_info['cuda_run'] += 1
         logging_info['total_nears'] += nears
         
-    logging_info['avg nears'] = logging_info['total_nears'] / logging_info['cuda_run']
-    logging_info['avg cuda_time'] = logging_info['cuda_time'] / logging_info['cuda_run']
+    logging_info['avg nears'] = logging_info['total_nears'] / float(logging_info['cuda_run'])
+    logging_info['avg cuda_time'] = logging_info['cuda_time'] / float(logging_info['cuda_run'])
 
+def reset_logging_info():
+
+    for key in logging_info:
+        logging_info[key] = 0
  
-def log_logging_info():
+def log_logging_info(title):
+
+    log(title)
 
     for key in logging_info:
         log(key + ': ' + str(logging_info[key]))
@@ -89,11 +95,15 @@ def loop(args):
                 if data == 'cuda_hamming_dist_in_compressed_domain':
                     print "call cuda_hamming_dist_in_compressed_domain"
                     call_cuda_hamming_dist_in_compressed_domain(client)
-                    log_logging_info()
+                    log_logging_info('cuda_hamming_dist_in_compressed_domain')
                 elif data == 'multi_iteration':
                     print "call multi_iteration"
                     call_multi_iteration(client)
-                    log_logging_info()
+                    log_logging_info('multi_iteration')
+                elif data == 'reset':
+                    reset_logging_info()
+                    log('reset logging info')
+                    print 'reset logging info'
                 else:
                     log(data)
                     print data
