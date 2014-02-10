@@ -106,13 +106,21 @@ class CudaHammingNetClient(object):
                             if data != 'next': raise ValueError('Socket Error')
                         else:
                             raise ValueError('Socket Error') 
- 
-                        for column in columns:
 
+                        concate_columns = numpy.array([]) 
+
+                        for column in columns:
                             if vlq_mode == 'y':
-                                conn.send_long_vector(s, numpy.frombuffer(column, dtype = numpy.uint8), 1)
+                                np_array = numpy.frombuffer(column, dtype = numpy.uint8)
+                                np_array = np_array.astype(numpy.uint32)
+                                concate_columns = numpy.concatenate((concate_columns, numpy.array([np_array.shape[0]]).astype(numpy.uint32)))
+                                concate_columns = numpy.concatenate((concate_columns, np_array))
                             else:
-                                conn.send_long_vector(s, numpy.frombuffer(column, dtype = numpy.uint32), 4)
+                                np_array = numpy.frombuffer(column, dtype = numpy.uint32)
+                                concate_columns = numpy.concatenate((concate_columns, numpy.array([np_array.shape[0]]).astype(numpy.uint32)))
+                                concate_columns = numpy.concatenate((concate_columns, np_array))
+                        
+                        conn.send_long_vector(s, concate_columns.astype(numpy.uint32), 4)
  
                     if s.sendall("done") == None:
                         data = s.recv(1024)

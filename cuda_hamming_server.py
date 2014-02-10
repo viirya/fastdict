@@ -108,7 +108,8 @@ def loop(args):
                     log(data)
                     print data
                     
-            except:
+            except Exception as e:
+                print e
                 print "Exception found. Close connection."
         
             client.close()
@@ -214,11 +215,7 @@ def call_cuda_hamming_dist_in_compressed_domain(client):
 
                         if client.sendall('next') == None:
                     
-                            columns = []
-                            while cols_length > 0:
-                                columns.append(buffer(conn.recv_long_vector(client, None)))
-                                cols_length -= 1
-                            
+                            columns = conn.recv_long_vector(client, None)
                             columns_vector.append(columns)
                             
                             cols_vec_length -= 1
@@ -262,8 +259,22 @@ def call_cuda_hamming_dist_in_compressed_domain(client):
     if client.recv(1024) != 'ready':
         raise ValueError('Socket Error')
 
+    reshape_columns_vector = []
+    for columns in columns_vector:
+        idx = 0
+        reshape_columns = []
+        np_columns = numpy.frombuffer(columns, dtype = numpy.uint32)
+        while idx < np_columns.shape[0]:
+            length = np_columns[idx]
+            np_array = np_columns[idx + 1: idx + 1 + length]
+            if vlq_mode == 'y': np_array = np_array.astype(numpy.uint8)
+            reshape_columns.append(buffer(np_array))
+            idx = idx + 1 + length
+
+        reshape_columns_vector.append(reshape_columns)
+
     # hamming_distances: uint8 numpy array
-    hamming_distances = cuda_hamming_obj.cuda_hamming_dist_in_compressed_domain(vec_a, columns_vector, image_ids, vlq_mode)
+    hamming_distances = cuda_hamming_obj.cuda_hamming_dist_in_compressed_domain(vec_a, reshape_columns_vector, image_ids, vlq_mode)
 
     log_info(hamming_distances)
  

@@ -44,6 +44,7 @@ def recv_long_vector(client, type = numpy.uint64):
         if part_binary_codes_length == 0: continue
     
         binary_codes_part = client.recv(part_binary_codes_length)
+
         if not binary_codes_part: break
     
         if not client.sendall('next') == None: raise ValueError('Socket Error')
