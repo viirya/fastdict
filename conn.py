@@ -1,7 +1,7 @@
 
 import numpy
 
-send_block_size = 100
+send_block_size = 10000
 
 def send_long_vector(s, vector, size_per_item = 8):
 
@@ -44,6 +44,8 @@ def recv_long_vector(client, type = numpy.uint64):
         if part_binary_codes_length == 0: continue
     
         binary_codes_part = client.recv(part_binary_codes_length)
+        while len(binary_codes_part) < part_binary_codes_length:
+            binary_codes_part += client.recv(part_binary_codes_length - len(binary_codes_part))
 
         if not binary_codes_part: break
     
