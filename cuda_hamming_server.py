@@ -26,6 +26,20 @@ def init():
 
     return args
 
+def log_near(hamming_distances, distance):
+
+    nears = numpy.where(hamming_distances[0] <= distance)
+    nears = len(nears[0])
+    log('<= ' + str(distance) + ' nears: ' + str(nears))
+
+    if not 'total_nears (' + str(distance) + ')' in logging_info:
+        logging_info['total_nears (' + str(distance) + ')'] = nears
+    else:
+        logging_info['total_nears (' + str(distance) + ')'] += nears
+
+    logging_info['avg nears (' + str(distance) + ')'] = logging_info['total_nears (' + str(distance) + ')'] / float(logging_info['cuda_run'])
+
+
 def log_info(hamming_distances):
 
     cuda_time = hamming_distances[1]
@@ -36,20 +50,16 @@ def log_info(hamming_distances):
     log('min: ' + str(numpy.amin(hamming_distances[0])))
     log('mean: ' + str(numpy.mean(hamming_distances[0])))
 
-    nears = numpy.where(hamming_distances[0] <= 10)
-    nears = len(nears[0])
-    log('<= 10 nears: ' + str(nears))
-
     if not 'cuda_time' in logging_info:
         logging_info['cuda_time'] = cuda_time
         logging_info['cuda_run'] = 1
-        logging_info['total_nears'] = nears
     else:
         logging_info['cuda_time'] += cuda_time
         logging_info['cuda_run'] += 1
-        logging_info['total_nears'] += nears
+
+    for i in range(0, 11):
+        log_near(hamming_distances, i)
         
-    logging_info['avg nears'] = logging_info['total_nears'] / float(logging_info['cuda_run'])
     logging_info['avg cuda_time'] = logging_info['cuda_time'] / float(logging_info['cuda_run'])
 
 def reset_logging_info():
