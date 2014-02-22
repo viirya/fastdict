@@ -399,8 +399,9 @@ class LSHash(object):
 
                             return self.sorting(image_ids, hamming_distances)
 
-                        except:
+                        except Exception as e:
                             print "Exception found in computing hamming distance."
+                            print e
                             return []
 
 

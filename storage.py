@@ -254,7 +254,7 @@ class RandomInMemoryStorage(InMemoryStorage):
         if not self.inited_runtime:
             print "init rumtime dict..."
             if self.storage.get_dict_status() == 0:
-                self.storage.init_runtime_dict()
+                self.storage.init_runtime_python_dict()
             else:
                 print "Incorrect dict mode."
             print "done."
@@ -356,7 +356,7 @@ class RandomInMemoryStorage(InMemoryStorage):
 
         if self.storage.get_dict_status() == 2:
             print "compressed runtime dict"
-            cols = self.storage.mget_cols_as_buffer(self.actual_keys(reference_key, level).tolist())
+            cols = self.storage.mget_python_cols_as_buffer(self.actual_keys(reference_key, level).tolist())
             image_ids = self.storage.mget_image_ids(self.actual_keys(reference_key, level).tolist())
         elif self.storage.get_dict_status() == 3:
             print "VLQ base64 compressed runtime dict"

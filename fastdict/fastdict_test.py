@@ -219,7 +219,57 @@ class TestFastCompressUInt32IntDict(unittest.TestCase):
                             self.assertEqual(data[0], 0)
                 index += 1
             buffer_index += 1
+ 
+    def test_runtime_python_dict(self):
+        f_dict = fastdict.FastCompressUInt32IntDict(self.dimension)
+        f_dict.set(123, 6794572984750169060, 0)
+        f_dict.append(123, 678, 1)
+        f_dict.batch_append([123, 123], [456, 123123], [3, 4])
+        f_dict.set(456, 789, 2)
+        f_dict.set(789, 123, 3)
 
+        f_dict.go_index()
+        f_dict.init_runtime_python_dict()
+
+        cols_buffer = f_dict.get_python_cols_as_buffer(123)
+        # 64 columns 
+        self.assertEqual(len(cols_buffer), 64)
+        index = 0
+        for buffers in cols_buffer:
+            if index == 0:
+                self.assertEqual(len(buffers), 16)
+            for i in range(0, len(buffers) / 4):
+                data = ''
+                for j in range(i * 4, i * 4 + 4):
+                    data = data + buffers[j]
+                data = struct.unpack('I', data)
+                if index == 0:
+                    if i == 0:
+                        self.assertEqual(data[0], 2)
+                    if i == 1:
+                        self.assertEqual(data[0], 1)
+            index += 1
+ 
+        cols_buffers = f_dict.mget_python_cols_as_buffer([123, 456])
+        self.assertEqual(len(cols_buffers), 2)
+
+        buffer_index = 0
+        for cols_buffer in cols_buffers:
+            index = 0
+            for buffers in cols_buffer:
+                for i in range(0, len(buffers) / 4):
+                    data = ''
+                    for j in range(i * 4, i * 4 + 4):
+                        data = data + buffers[j]
+                    data = struct.unpack('I', data)
+                    if index == 63 and buffer_index == 1:
+                        if i == 0:
+                            self.assertEqual(data[0], 1)
+                        if i == 1:
+                            self.assertEqual(data[0], 0)
+                index += 1
+            buffer_index += 1
+ 
     def test_VLQ_base64(self):
         vlq_dict = fastdict.FastCompressUInt32IntDict(8)
         self.assertEqual(vlq_dict.base64VLQ_encode(123123), 'zn4D')
@@ -541,7 +591,57 @@ class TestFastCompressUInt32Int8Dict(unittest.TestCase):
                             self.assertEqual(data[0], 0)
                 index += 1
             buffer_index += 1
+ 
+    def test_runtime_python_dict(self):
+        f_dict = fastdict.FastCompressUInt32Int8Dict(self.dimension)
+        f_dict.set(123, 6794572984750169060, 0)
+        f_dict.append(123, 678, 1)
+        f_dict.batch_append([123, 123], [456, 123123], [3, 4])
+        f_dict.set(456, 789, 2)
+        f_dict.set(789, 123, 3)
 
+        f_dict.go_index()
+        f_dict.init_runtime_python_dict()
+
+        cols_buffer = f_dict.get_python_cols_as_buffer(123)
+        # 64 columns 
+        self.assertEqual(len(cols_buffer), 64)
+        index = 0
+        for buffers in cols_buffer:
+            if index == 0:
+                self.assertEqual(len(buffers), 16)
+            for i in range(0, len(buffers) / 4):
+                data = ''
+                for j in range(i * 4, i * 4 + 4):
+                    data = data + buffers[j]
+                data = struct.unpack('I', data)
+                if index == 0:
+                    if i == 0:
+                        self.assertEqual(data[0], 2)
+                    if i == 1:
+                        self.assertEqual(data[0], 1)
+            index += 1
+ 
+        cols_buffers = f_dict.mget_python_cols_as_buffer([123, 456])
+        self.assertEqual(len(cols_buffers), 2)
+
+        buffer_index = 0
+        for cols_buffer in cols_buffers:
+            index = 0
+            for buffers in cols_buffer:
+                for i in range(0, len(buffers) / 4):
+                    data = ''
+                    for j in range(i * 4, i * 4 + 4):
+                        data = data + buffers[j]
+                    data = struct.unpack('I', data)
+                    if index == 63 and buffer_index == 1:
+                        if i == 0:
+                            self.assertEqual(data[0], 1)
+                        if i == 1:
+                            self.assertEqual(data[0], 0)
+                index += 1
+            buffer_index += 1
+ 
     def test_VLQ_base64(self):
         vlq_dict = fastdict.FastCompressUInt32Int8Dict(8)
         self.assertEqual(vlq_dict.base64VLQ_encode(123123), 'zn4D')
@@ -864,7 +964,57 @@ class TestFastCompressUInt32StringDict(unittest.TestCase):
                             self.assertEqual(data[0], 0)
                 index += 1
             buffer_index += 1
+ 
+    def test_runtime_python_dict(self):
+        f_dict = fastdict.FastCompressUInt32StringDict(self.dimension)
+        f_dict.set(123, 6794572984750169060, "0")
+        f_dict.append(123, 678, "1")
+        f_dict.batch_append([123, 123], [456, 123123], ["3", "4"])
+        f_dict.set(456, 789, "2")
+        f_dict.set(789, 123, "3")
 
+        f_dict.go_index()
+        f_dict.init_runtime_python_dict()
+
+        cols_buffer = f_dict.get_python_cols_as_buffer(123)
+        # 64 columns 
+        self.assertEqual(len(cols_buffer), 64)
+        index = 0
+        for buffers in cols_buffer:
+            if index == 0:
+                self.assertEqual(len(buffers), 16)
+            for i in range(0, len(buffers) / 4):
+                data = ''
+                for j in range(i * 4, i * 4 + 4):
+                    data = data + buffers[j]
+                data = struct.unpack('I', data)
+                if index == 0:
+                    if i == 0:
+                        self.assertEqual(data[0], 2)
+                    if i == 1:
+                        self.assertEqual(data[0], 1)
+            index += 1
+ 
+        cols_buffers = f_dict.mget_python_cols_as_buffer([123, 456])
+        self.assertEqual(len(cols_buffers), 2)
+
+        buffer_index = 0
+        for cols_buffer in cols_buffers:
+            index = 0
+            for buffers in cols_buffer:
+                for i in range(0, len(buffers) / 4):
+                    data = ''
+                    for j in range(i * 4, i * 4 + 4):
+                        data = data + buffers[j]
+                    data = struct.unpack('I', data)
+                    if index == 63 and buffer_index == 1:
+                        if i == 0:
+                            self.assertEqual(data[0], 1)
+                        if i == 1:
+                            self.assertEqual(data[0], 0)
+                index += 1
+            buffer_index += 1
+ 
     def test_VLQ_base64(self):
         vlq_dict = fastdict.FastCompressUInt32StringDict(8)
         self.assertEqual(vlq_dict.base64VLQ_encode(123123), 'zn4D')

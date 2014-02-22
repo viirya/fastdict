@@ -579,6 +579,39 @@ public:
         dict_status = 2;
     }
  
+    void init_runtime_python_dict() {
+
+        std::pair<std::vector<uint8_t>, std::pair<std::vector<std::vector<BitCountType> >, std::vector<IdType> > > me;
+
+        BOOST_FOREACH(me, column_dict) {
+            boost::python::list columns;
+            std::vector<uint32_t> columns_length;
+
+            std::vector<BitCountType> column;
+            BOOST_FOREACH(column, me.second.first) {               
+                BitCountType* column_as_array =  new BitCountType[column.size()];
+
+                int ele_index = 0;
+                BOOST_FOREACH(BitCountType ele, column) {
+                    column_as_array[ele_index++] = ele;
+                }
+
+                PyObject* buffer_obj = PyBuffer_FromMemory ((void*)column_as_array, column.size() * sizeof(BitCountType));
+                boost::python::incref(buffer_obj);
+
+                columns.append(*buffer_obj);
+                columns_length.insert(columns_length.end(), column.size());
+            }
+
+            std::pair<boost::python::list, std::vector<IdType> > nested_pair(columns, me.second.second);
+            std::pair<std::vector<uint32_t>, std::pair<boost::python::list, std::vector<IdType> > > pair(columns_length, nested_pair);
+            runtime_python_dict[me.first] = pair;
+        }
+        column_dict.clear();
+
+        dict_status = 2;
+    }
+ 
     // initiate runtime dict for VLQ base64 column dict
     void init_runtime_VLQ_base64_dict() {
 
@@ -638,6 +671,17 @@ public:
         return buffers;
     }
  
+    PyObject* get_python_cols_as_buffer(uint32_t key) {
+        std::vector<uint8_t> bool_key = super::actual_key(key);
+
+        if (runtime_python_dict.count(bool_key) > 0)
+            return boost::python::incref(runtime_python_dict[bool_key].second.first.ptr());
+        else {
+            boost::python::list pylist;
+            return boost::python::incref(pylist.ptr());
+        }
+    }
+ 
     // for non VQL base64 runtime dict 
     std::vector<std::vector<PyObject*> > mget_cols_as_buffer(boost::python::list& keys) {
 
@@ -648,7 +692,17 @@ public:
         }
         return return_vector;
     }
+ 
+    PyObject* mget_python_cols_as_buffer(boost::python::list& keys) {
 
+        boost::python::list return_vector;
+
+        for (int i = 0; i < len(keys); i++) {
+            return_vector.append(*get_python_cols_as_buffer(boost::python::extract<uint32_t>(keys[i])));
+        }
+        return boost::python::incref(return_vector.ptr());
+    }
+ 
  
     // for VLQ base64 runtime dict
     std::vector<PyObject*> get_VLQ_base64_cols_as_buffer(uint32_t key) {
@@ -690,6 +744,8 @@ public:
 
         if (runtime_dict.count(bool_key) > 0)
             return runtime_dict[bool_key].second.second;
+        else if (runtime_python_dict.count(bool_key) > 0)
+            return runtime_python_dict[bool_key].second.second;
         else {
             std::vector<IdType> id_vector(0);
             return id_vector;
@@ -1074,6 +1130,9 @@ public:
  
     std::map<std::vector<uint8_t>, std::pair<std::vector<uint32_t>, std::pair<std::vector<BitCountType*>, std::vector<IdType> > > > runtime_dict;
 
+    // use boost::python::list instead of std::vector to store runtime dict
+    std::map<std::vector<uint8_t>, std::pair<std::vector<uint32_t>, std::pair<boost::python::list, std::vector<IdType> > > > runtime_python_dict;
+
     std::map<std::vector<uint8_t>, std::pair<std::vector<uint32_t>, std::pair<std::vector<char*>, std::vector<IdType> > > > runtime_vlq_dict;
  
 };
@@ -1226,7 +1285,9 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("get_binary_codes", &FastCompressDict<uint8_t, uint32_t>::get_binary_codes)
         .def("mget_binary_codes", &FastCompressDict<uint8_t, uint32_t>::mget_binary_codes)
         .def("get_cols_as_buffer", &FastCompressDict<uint8_t, uint32_t>::get_cols_as_buffer)
+        .def("get_python_cols_as_buffer", &FastCompressDict<uint8_t, uint32_t>::get_python_cols_as_buffer)
         .def("mget_cols_as_buffer", &FastCompressDict<uint8_t, uint32_t>::mget_cols_as_buffer)
+        .def("mget_python_cols_as_buffer", &FastCompressDict<uint8_t, uint32_t>::mget_python_cols_as_buffer)
         .def("get_image_ids", &FastCompressDict<uint8_t, uint32_t>::get_image_ids)
         .def("mget_image_ids", &FastCompressDict<uint8_t, uint32_t>::mget_image_ids)
         .def("get_image_ids_before_runtime_init", &FastCompressDict<uint8_t, uint32_t>::get_image_ids_before_runtime_init)
@@ -1234,6 +1295,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("get_VLQ_base64_image_ids_before_runtime_init", &FastCompressDict<uint8_t, uint32_t>::get_VLQ_base64_image_ids_before_runtime_init)
         .def("mget_VLQ_base64_image_ids_before_runtime_init", &FastCompressDict<uint8_t, uint32_t>::mget_VLQ_base64_image_ids_before_runtime_init)
         .def("init_runtime_dict", &FastCompressDict<uint8_t, uint32_t>::init_runtime_dict)
+        .def("init_runtime_python_dict", &FastCompressDict<uint8_t, uint32_t>::init_runtime_python_dict)
         .def("base64VLQ_encode", &FastCompressDict<uint8_t, uint32_t>::base64VLQ_encode<uint8_t>)
         .def("base64VLQ_decode", &FastCompressDict<uint8_t, uint32_t>::base64VLQ_decode<uint8_t>)
         .def("to_VLQ_base64_dict", &FastCompressDict<uint8_t, uint32_t>::to_VLQ_base64_dict)
@@ -1311,7 +1373,9 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("get_binary_codes", &FastCompressDict<uint32_t, uint32_t>::get_binary_codes)
         .def("mget_binary_codes", &FastCompressDict<uint32_t, uint32_t>::mget_binary_codes)
         .def("get_cols_as_buffer", &FastCompressDict<uint32_t, uint32_t>::get_cols_as_buffer)
+        .def("get_python_cols_as_buffer", &FastCompressDict<uint32_t, uint32_t>::get_python_cols_as_buffer)
         .def("mget_cols_as_buffer", &FastCompressDict<uint32_t, uint32_t>::mget_cols_as_buffer)
+        .def("mget_python_cols_as_buffer", &FastCompressDict<uint32_t, uint32_t>::mget_python_cols_as_buffer)
         .def("get_image_ids", &FastCompressDict<uint32_t, uint32_t>::get_image_ids)
         .def("mget_image_ids", &FastCompressDict<uint32_t, uint32_t>::mget_image_ids)
         .def("get_image_ids_before_runtime_init", &FastCompressDict<uint32_t, uint32_t>::get_image_ids_before_runtime_init)
@@ -1319,6 +1383,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("get_VLQ_base64_image_ids_before_runtime_init", &FastCompressDict<uint32_t, uint32_t>::get_VLQ_base64_image_ids_before_runtime_init)
         .def("mget_VLQ_base64_image_ids_before_runtime_init", &FastCompressDict<uint32_t, uint32_t>::mget_VLQ_base64_image_ids_before_runtime_init)
         .def("init_runtime_dict", &FastCompressDict<uint32_t, uint32_t>::init_runtime_dict)
+        .def("init_runtime_python_dict", &FastCompressDict<uint32_t, uint32_t>::init_runtime_python_dict)
         .def("base64VLQ_encode", &FastCompressDict<uint32_t, uint32_t>::base64VLQ_encode<uint32_t>)
         .def("base64VLQ_decode", &FastCompressDict<uint32_t, uint32_t>::base64VLQ_decode<uint32_t>)
         .def("to_VLQ_base64_dict", &FastCompressDict<uint32_t, uint32_t>::to_VLQ_base64_dict)
@@ -1388,7 +1453,9 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("get_binary_codes", &FastCompressDict<uint32_t, uint8_t>::get_binary_codes)
         .def("mget_binary_codes", &FastCompressDict<uint32_t, uint8_t>::mget_binary_codes)
         .def("get_cols_as_buffer", &FastCompressDict<uint32_t, uint8_t>::get_cols_as_buffer)
+        .def("get_python_cols_as_buffer", &FastCompressDict<uint32_t, uint8_t>::get_python_cols_as_buffer)
         .def("mget_cols_as_buffer", &FastCompressDict<uint32_t, uint8_t>::mget_cols_as_buffer)
+        .def("mget_python_cols_as_buffer", &FastCompressDict<uint32_t, uint8_t>::mget_python_cols_as_buffer)
         .def("get_image_ids", &FastCompressDict<uint32_t, uint8_t>::get_image_ids)
         .def("mget_image_ids", &FastCompressDict<uint32_t, uint8_t>::mget_image_ids)
         .def("get_image_ids_before_runtime_init", &FastCompressDict<uint32_t, uint8_t>::get_image_ids_before_runtime_init)
@@ -1396,6 +1463,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("get_VLQ_base64_image_ids_before_runtime_init", &FastCompressDict<uint32_t, uint8_t>::get_VLQ_base64_image_ids_before_runtime_init)
         .def("mget_VLQ_base64_image_ids_before_runtime_init", &FastCompressDict<uint32_t, uint8_t>::mget_VLQ_base64_image_ids_before_runtime_init)
         .def("init_runtime_dict", &FastCompressDict<uint32_t, uint8_t>::init_runtime_dict)
+        .def("init_runtime_python_dict", &FastCompressDict<uint32_t, uint8_t>::init_runtime_python_dict)
         .def("base64VLQ_encode", &FastCompressDict<uint32_t, uint8_t>::base64VLQ_encode<uint32_t>)
         .def("base64VLQ_decode", &FastCompressDict<uint32_t, uint8_t>::base64VLQ_decode<uint32_t>)
         .def("to_VLQ_base64_dict", &FastCompressDict<uint32_t, uint8_t>::to_VLQ_base64_dict)
@@ -1466,7 +1534,9 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("get_binary_codes", &FastCompressDict<uint32_t, std::string>::get_binary_codes)
         .def("mget_binary_codes", &FastCompressDict<uint32_t, std::string>::mget_binary_codes)
         .def("get_cols_as_buffer", &FastCompressDict<uint32_t, std::string>::get_cols_as_buffer)
+        .def("get_python_cols_as_buffer", &FastCompressDict<uint32_t, std::string>::get_python_cols_as_buffer)
         .def("mget_cols_as_buffer", &FastCompressDict<uint32_t, std::string>::mget_cols_as_buffer)
+        .def("mget_python_cols_as_buffer", &FastCompressDict<uint32_t, std::string>::mget_python_cols_as_buffer)
         .def("get_image_ids", &FastCompressDict<uint32_t, std::string>::get_image_ids)
         .def("mget_image_ids", &FastCompressDict<uint32_t, std::string>::mget_image_ids)
         .def("get_image_ids_before_runtime_init", &FastCompressDict<uint32_t, std::string>::get_image_ids_before_runtime_init)
@@ -1474,6 +1544,7 @@ BOOST_PYTHON_MODULE(fastdict)
         .def("get_VLQ_base64_image_ids_before_runtime_init", &FastCompressDict<uint32_t, std::string>::get_VLQ_base64_image_ids_before_runtime_init)
         .def("mget_VLQ_base64_image_ids_before_runtime_init", &FastCompressDict<uint32_t, std::string>::mget_VLQ_base64_image_ids_before_runtime_init)
         .def("init_runtime_dict", &FastCompressDict<uint32_t, std::string>::init_runtime_dict)
+        .def("init_runtime_python_dict", &FastCompressDict<uint32_t, std::string>::init_runtime_python_dict)
         .def("base64VLQ_encode", &FastCompressDict<uint32_t, std::string>::base64VLQ_encode<uint32_t>)
         .def("base64VLQ_decode", &FastCompressDict<uint32_t, std::string>::base64VLQ_decode<uint32_t>)
         .def("to_VLQ_base64_dict", &FastCompressDict<uint32_t, std::string>::to_VLQ_base64_dict)

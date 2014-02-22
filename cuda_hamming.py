@@ -283,7 +283,7 @@ __global__ void hamming_dist(uint64_t *a, uint64_t *b, uint64_t *length)
             concate_col = numpy.zeros(max_length * 2 * 4).astype(numpy.uint8)
         else:
             concate_col = numpy.zeros(max_length * 2).astype(numpy.uint8)
- 
+
         gpu_alloc_objs = []
         for col_idx in range(0, 64):
 
