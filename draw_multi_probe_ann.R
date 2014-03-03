@@ -6,7 +6,7 @@ draw_figure_ggplot <- function(dataname, data_frames) {
     print(data_frames)
 
     p <- ggplot(data_frames, aes(x = probe, y = nn, group = distance))
-    p + geom_line(aes(colour = distance)) + scale_colour_discrete(h = c(0, 360) + 15, c = 100, h.start = 0, direction = 1) + xlab("Number of multi-probe") + ylab("NN percentage in theory")
+    p + geom_line(aes(colour = distance)) + scale_colour_discrete(h = c(0, 360) + 15, c = 100, h.start = 0, direction = 1) + xlab("Number of multi-probe") + ylab("NN percentage in theory") + theme_bw() + theme(axis.title.x = element_text(size = 15), axis.title.y = element_text(size = 15), legend.text = element_text(size = 15), legend.title = element_text(size = 15), axis.text = element_text(size = 15))
 
     ggsave(file = paste(dataname, ".eps", sep = ''))
 }
