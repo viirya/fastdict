@@ -10,8 +10,8 @@ if (argLen == 6) {
     best_weight <- as.double(arg[6])
 
 
-    first_ele = c(1:min(arg_b, arg_s, ceiling(log2(arg_n)) + 1))
-    second_ele = c(min(arg_b, arg_s, ceiling(log2(arg_n)) + 1):(arg_b - arg_s))
+    first_ele = c(1:min(arg_b - arg_s, ceiling(log2(arg_n)) + 1))
+    second_ele = c(min(arg_b - arg_s, ceiling(log2(arg_n)) + 1):(arg_b - arg_s))
 
     print(first_ele)
     print(second_ele)
@@ -21,7 +21,7 @@ if (argLen == 6) {
 
     first_sum = sum(2 ^ first_ele) * worst_weight + (2 * length(first_ele)) * best_weight
 
-    second_sum = sum(rep(arg_n + 1, (arg_b - log2(arg_n)))) * worst_weight + (2 * length(second_ele)) * best_weight
+    second_sum = sum(rep(arg_n + 1, (arg_b - arg_s - log2(arg_n)))) * worst_weight + (2 * length(second_ele)) * best_weight
 
     sampled_sum = (2 * arg_s)
 

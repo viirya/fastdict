@@ -72,6 +72,14 @@ Parameters:
 * -title: the title string that will be logged at cuda server.
 * -gt: the feature file of ground truth.
 
+#### R script to calculate theoretical compression performance
+
+    R --slave --args <binary code length> <number of binary codes> <bit width of bit counts> <number of sampled dimensions> <weight of worst-case> <weight of best-case> < cal_compress_effect.R
+
+For example:
+
+    R --slave --args 64 1000000000 32 32 0.19 0.81 < cal_compress_effect.R
+
 
 
 
