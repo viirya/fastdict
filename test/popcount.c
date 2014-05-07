@@ -38,6 +38,7 @@ inline u32 popcount64_4(u64 x)
 }
 
 u64 data[1024];
+u64 data2[1024];
 
 u64 lrand64(void)
 {
@@ -57,8 +58,10 @@ main()
 
     srand48(time(0));
 
-    for (i = 0; i < 1024; i++)
+    for (i = 0; i < 1024; i++) {
         data[i] = lrand64();
+        data2[i] = lrand64();
+    }
 
     for (i = 0; i < 1024; i++)
     {
@@ -85,8 +88,11 @@ main()
 
     t1 = clock();
     for (j = 0; j < 1000000; j++)
-        for (i = 0; i < 1024; i++)
-            pt = popcount64_1(data[i]);
+        for (i = 0; i < 1024; i++) {
+            u64 xor_r = data[i] ^ data[2]; 
+            pt = popcount64_1(xor_r);
+        }
+
     t2 = clock();
 
     printf("popcount64_1 = %d clocks\n", t2 - t1);
@@ -94,8 +100,11 @@ main()
  
     t1 = clock();
     for (j = 0; j < 1000000; j++)
-        for (i = 0; i < 1024; i++)
-            pt = popcount64_2(data[i]);
+        for (i = 0; i < 1000; i++) {
+            u64 xor_r = data[i] ^ data[2];
+            pt = popcount64_2(xor_r);
+        }
+
     t2 = clock();
 
     printf("popcount64_2 = %d clocks\n", t2 - t1);
@@ -103,8 +112,11 @@ main()
  
     t1 = clock();
     for (j = 0; j < 1000000; j++)
-        for (i = 0; i < 1024; i++)
-            pt = popcount64_3(data[i]);
+        for (i = 0; i < 1024; i++) {
+            u64 xor_r = data[i] ^ data[2];
+            pt = popcount64_3(xor_r);
+        }
+
     t2 = clock();
 
     printf("popcount64_3 = %d clocks\n", t2 - t1);
@@ -112,8 +124,11 @@ main()
  
     t1 = clock();
     for (j = 0; j < 1000000; j++)
-        for (i = 0; i < 1024; i++)
-            pt = popcount64_4(data[i]);
+        for (i = 0; i < 1024; i++) {
+            u64 xor_r = data[i] ^ data[2];
+            pt = popcount64_4(xor_r);
+        }
+
     t2 = clock();
 
     printf("popcount64_4 = %d clocks\n", t2 - t1);
