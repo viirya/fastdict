@@ -8,9 +8,9 @@ Install Python 2.7.
 
 Install Python modules:
 
-    pip install numpy
-	pip install bitarray
-	pip install redis
+- `pip install numpy`
+- `pip install bitarray`
+- `pip install redis`
 	
 Other prerequisites:
 
@@ -19,7 +19,8 @@ Other prerequisites:
 * Boost::Python
 * Boost::Serialization
 
-Download and compile [yael library](https://gforge.inria.fr/projects/yael). Copy generated `yael.py`, `_yael.so` under the same path of these scripts.
+Download and compile [yael library](https://gforge.inria.fr/projects/yael) with the `--enable-numpy` option. Copy generated `yael.py`, `_yael.so` under the same path of these scripts.
+
 
 This repo uses modified [LSHash](https://github.com/kayzh/LSHash).
 
